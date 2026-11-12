@@ -1,0 +1,355 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090014">
+<title>FLAG VIDEO</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#35105b,#090014 65%);color:white;font-family:Arial,system-ui;padding:18px}
+main{max-width:700px;margin:auto}
+header{text-align:center;padding:15px}
+header h1{font-size:34px;margin:5px;background:linear-gradient(90deg,#fff,#ff69d4,#a66bff);background-clip:text;color:transparent}
+header p{color:#bba9d0;font-size:13px}
+.panel{background:#190b2c;border:1px solid #482766;border-radius:20px;padding:17px;margin:15px 0}
+label{display:block;font-weight:bold;margin:14px 0 7px}
+select{width:100%;padding:13px;border-radius:11px;background:#10071c;color:white;border:1px solid #69438a;font-size:14px}
+button{width:100%;padding:15px;border:0;border-radius:12px;background:linear-gradient(100deg,#913cff,#ee55c8);color:white;font-weight:bold;font-size:15px;margin-top:12px}
+button.secondary{background:#302044;border:1px solid #67408a}
+button:disabled{opacity:.5}
+.preview{width:min(100%,300px);aspect-ratio:9/16;margin:15px auto;background:#10051d;border:1px solid #69438a;border-radius:16px;overflow:hidden}
+canvas{width:100%;height:100%;display:block}
+.status{font-size:13px;color:#e4c7ff;line-height:1.5;margin-top:12px;white-space:pre-wrap}
+.hint{font-size:12px;color:#b9a9ca;line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>⚑ FLAG VIDEO</h1>
+<p>QUIZ FACTORY · TIKTOK EDITION</p>
+</header>
+
+<section class="panel">
+<label>Phrase d'introduction</label>
+<select id="intro">
+<option>Seras-tu capable de trouver les 5 pays ?</option>
+<option>Arriveras-tu à faire un sans-faute ?</option>
+<option>Seuls les vrais experts feront 5 sur 5 !</option>
+<option>Connais-tu vraiment les drapeaux du monde ?</option>
+<option>Tu as 5 secondes pour trouver chaque pays !</option>
+</select>
+
+<label>Voix</label>
+<select id="voice">
+<option value="fr">Voix française disponible sur ton iPhone</option>
+</select>
+
+<label>Difficulté</label>
+<select id="difficulty">
+<option value="mix">Mélange équilibré</option>
+<option value="random">Totalement aléatoire</option>
+<option value="hard">Plutôt difficile</option>
+</select>
+
+<p class="hint">5 secondes pour trouver · 2 secondes pour découvrir · Format vertical 9:16</p>
+
+<button id="newQuiz">🎲 Nouveau quiz</button>
+<button id="previewBtn" class="secondary">▶ Aperçu animé</button>
+<button id="voiceBtn" class="secondary">🔊 Écouter l'introduction</button>
+<button id="generate">⬇ Générer et télécharger</button>
+
+<div class="status" id="status">Prêt ! Choisis tes paramètres et lance ton quiz.</div>
+</section>
+
+<section class="panel">
+<h3 style="text-align:center">APERÇU VIDÉO</h3>
+<div class="preview">
+<canvas id="screen" width="540" height="960"></canvas>
+</div>
+<p class="hint" style="text-align:center">FLAG VIDEO · Format TikTok 1080 × 1920 à l'export lorsque le navigateur le permet.</p>
+</section>
+</main>
+
+<script>
+const countries=[
+["FR","France","FACILE"],["US","États-Unis","FACILE"],
+["GB","Royaume-Uni","FACILE"],["IT","Italie","FACILE"],
+["DE","Allemagne","FACILE"],["ES","Espagne","FACILE"],
+["JP","Japon","FACILE"],["BR","Brésil","FACILE"],
+["CA","Canada","FACILE"],["CN","Chine","FACILE"],
+["PT","Portugal","MOYEN"],["GR","Grèce","MOYEN"],
+["SE","Suède","MOYEN"],["NO","Norvège","MOYEN"],
+["MX","Mexique","MOYEN"],["AR","Argentine","MOYEN"],
+["KR","Corée du Sud","MOYEN"],["TR","Turquie","MOYEN"],
+["CH","Suisse","MOYEN"],["ZA","Afrique du Sud","MOYEN"],
+["LK","Sri Lanka","DIFFICILE"],["BT","Bhoutan","DIFFICILE"],
+["KG","Kirghizistan","DIFFICILE"],["MD","Moldavie","DIFFICILE"],
+["MZ","Mozambique","DIFFICILE"],["SC","Seychelles","DIFFICILE"],
+["SR","Suriname","DIFFICILE"],["TJ","Tadjikistan","DIFFICILE"],
+["KI","Kiribati","EXPERT"],["VU","Vanuatu","EXPERT"],
+["KM","Comores","EXPERT"],["SZ","Eswatini","EXPERT"],
+["NR","Nauru","EXPERT"],["PW","Palaos","EXPERT"],
+["TL","Timor oriental","EXPERT"],["ST","Sao Tomé-et-Principe","EXPERT"]
+];
+
+const $=id=>document.getElementById(id);
+const canvas=$("screen");
+const ctx=canvas.getContext("2d");
+let quiz=[];
+let images={};
+let animation=null;
+let busy=false;
+
+function shuffle(a){
+ return [...a].sort(()=>Math.random()-.5);
+}
+
+function chooseQuiz(){
+ const mode=$("difficulty").value;
+ let levels;
+
+ if(mode==="mix"){
+  levels=["FACILE","FACILE","MOYEN","DIFFICILE","EXPERT"];
+ }else if(mode==="hard"){
+  levels=["MOYEN","DIFFICILE","DIFFICILE","EXPERT","EXPERT"];
+ }else{
+  levels=Array.from({length:5},()=>["FACILE","MOYEN","DIFFICILE","EXPERT"][Math.floor(Math.random()*4)]);
+ }
+
+ quiz=[];
+ for(const level of shuffle(levels)){
+  let pool=countries.filter(c=>c[2]===level&&!quiz.some(q=>q[0]===c[0]));
+  if(!pool.length)pool=countries.filter(c=>!quiz.some(q=>q[0]===c[0]));
+  quiz.push(shuffle(pool)[0]);
+ }
+}
+
+function status(msg){
+ $("status").textContent=msg;
+}
+
+function loadFlags(){
+ return Promise.all(quiz.map(c=>new Promise((resolve,reject)=>{
+  const img=new Image();
+  img.crossOrigin="anonymous";
+  img.onload=()=>{images[c[0]]=img;resolve()};
+  img.onerror=()=>reject(new Error("Chargement impossible : "+c[1]));
+  img.src="https://flagcdn.com/w1280/"+c[0].toLowerCase()+".png";
+ })));
+}
+
+function drawBackground(){
+ let g=ctx.createLinearGradient(0,0,540,960);
+ g.addColorStop(0,"#30104d");
+ g.addColorStop(1,"#090014");
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,540,960);
+}
+
+function draw(time){
+ drawBackground();
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
+
+ ctx.fillStyle="#ff8bdc";
+ ctx.font="bold 25px Arial";
+ ctx.fillText("FLAG VIDEO",270,75);
+
+ if(time<2.5){
+  ctx.fillStyle="white";
+  ctx.font="bold 34px Arial";
+  ctx.fillText("🌍",270,400);
+  ctx.fillText("PRÊT À JOUER ?",270,510);
+  ctx.font="bold 22px Arial";
+  ctx.fillStyle="#e9caff";
+  ctx.fillText($("intro").value,270,590);
+  return;
+ }
+
+ const t=time-2.5;
+ const index=Math.floor(t/7);
+
+ if(index>=5){
+  ctx.fillStyle="white";
+  ctx.font="bold 34px Arial";
+  ctx.fillText("TON SCORE ?",270,450);
+  ctx.font="bold 50px Arial";
+  ctx.fillStyle="#ff70d4";
+  ctx.fillText("?/5",270,540);
+  ctx.font="bold 20px Arial";
+  ctx.fillStyle="white";
+  ctx.fillText("DIS-LE EN COMMENTAIRE !",270,640);
+  return;
+ }
+
+ const local=t-index*7;
+ const reveal=local>=5;
+ const country=quiz[index];
+
+ ctx.fillStyle="#e6d4f7";
+ ctx.font="bold 23px Arial";
+ ctx.fillText("DRAPEAU "+(index+1)+" / 5",270,180);
+
+ ctx.fillStyle="white";
+ ctx.font="bold 27px Arial";
+ ctx.fillText(reveal?"LA RÉPONSE EST":"QUEL EST CE PAYS ?",270,285);
+
+ const img=images[country[0]];
+ if(img){
+  const ratio=Math.min(440/img.width,350/img.height);
+  const w=img.width*ratio;
+  const h=img.height*ratio;
+  ctx.fillStyle="white";
+  ctx.fillRect((540-w)/2-5,410-5,w+10,h+10);
+  ctx.drawImage(img,(540-w)/2,410,w,h);
+ }
+
+ if(reveal){
+  ctx.fillStyle="#ff77d9";
+  ctx.font="bold 34px Arial";
+  ctx.fillText(country[1].toUpperCase(),270,690);
+ }else{
+  ctx.fillStyle="#ff77d9";
+  ctx.font="bold 85px Arial";
+  ctx.fillText(String(Math.max(1,Math.ceil(5-local))),270,700);
+  ctx.fillStyle="white";
+  ctx.font="bold 19px Arial";
+  ctx.fillText("TROUVE LE PAYS !",270,790);
+ }
+
+ ctx.fillStyle="#cdb5e4";
+ ctx.font="bold 17px Arial";
+ ctx.fillText("ABONNE-TOI POUR PLUS DE QUIZ",270,910);
+}
+
+function speak(text){
+ if(!window.speechSynthesis){
+  status("La voix n'est pas disponible dans ce navigateur.");
+  return;
+ }
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="fr-FR";
+ u.rate=1;
+ const voices=speechSynthesis.getVoices();
+ const v=voices.find(x=>x.lang.toLowerCase().startsWith("fr"));
+ if(v)u.voice=v;
+ speechSynthesis.speak(u);
+}
+
+function newQuiz(){
+ chooseQuiz();
+ draw(0);
+ status("Nouveau quiz sélectionné. 5 pays sans doublon.");
+}
+
+$("newQuiz").onclick=newQuiz;
+
+$("voiceBtn").onclick=()=>{
+ speak($("intro").value);
+};
+
+$("previewBtn").onclick=async()=>{
+ try{
+  if(!quiz.length)chooseQuiz();
+  status("Chargement des drapeaux...");
+  await loadFlags();
+  if(animation)cancelAnimationFrame(animation);
+  const start=performance.now();
+  function loop(now){
+   const seconds=((now-start)/1000)%40;
+   draw(seconds);
+   animation=requestAnimationFrame(loop);
+  }
+  animation=requestAnimationFrame(loop);
+  status("Aperçu lancé !");
+ }catch(e){
+  status("Erreur : "+e.message);
+ }
+};
+
+function wait(ms){
+ return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+async function generate(){
+ if(busy)return;
+ busy=true;
+ $("generate").disabled=true;
+ try{
+  if(!quiz.length)chooseQuiz();
+  if(animation)cancelAnimationFrame(animation);
+
+  status("Chargement des drapeaux...");
+  await loadFlags();
+
+  if(!canvas.captureStream||!window.MediaRecorder){
+   throw new Error("L'export vidéo n'est pas pris en charge par ce navigateur. Essaie Safari à jour.");
+  }
+
+  const formats=[
+   "video/mp4;codecs=avc1.42E01E",
+   "video/mp4",
+   "video/webm;codecs=vp8",
+   "video/webm"
+  ];
+  const mime=formats.find(x=>MediaRecorder.isTypeSupported(x));
+  if(!mime)throw new Error("Aucun format vidéo compatible trouvé.");
+
+  const stream=canvas.captureStream(30);
+  const recorder=new MediaRecorder(stream,{mimeType:mime});
+  const chunks=[];
+
+  recorder.ondataavailable=e=>{
+   if(e.data&&e.data.size)chunks.push(e.data);
+  };
+
+  const finished=new Promise((resolve,reject)=>{
+   recorder.onstop=resolve;
+   recorder.onerror=()=>reject(new Error("Erreur pendant l'enregistrement."));
+  });
+
+  recorder.start();
+
+  const start=performance.now();
+  while((performance.now()-start)/1000<40){
+   const seconds=(performance.now()-start)/1000;
+   draw(seconds);
+   status("Création de la vidéo : "+Math.floor(seconds/40*100)+" %");
+   await wait(100);
+  }
+
+  recorder.stop();
+  await finished;
+  stream.getTracks().forEach(t=>t.stop());
+
+  const blob=new Blob(chunks,{type:mime});
+  const ext=mime.includes("mp4")?"mp4":"webm";
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="FLAG_VIDEO_"+Date.now()+"."+ext;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  status("Export terminé. Format : "+ext.toUpperCase()+". Vérifie les téléchargements de Safari.");
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+
+ }catch(e){
+  status("Impossible de générer : "+e.message);
+ }finally{
+  busy=false;
+  $("generate").disabled=false;
+ }
+}
+
+$("generate").onclick=generate;
+
+newQuiz();
+</script>
+</body>
+</html>
