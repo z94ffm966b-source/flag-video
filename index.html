@@ -168,14 +168,14 @@ canvas{
   <div class="buttons">
     <button id="newQuiz">🎲 Créer un nouveau quiz</button>
     <button class="secondary" id="previewBtn">▶ Aperçu animé</button>
-    <button id="oneBtn">🎥 Générer une vidéo</button>
-    <button id="fiveBtn">📦 Générer 5 vidéos ZIP</button>
+    <button id="oneBtn">🎥 Générer une vidéo MP4</button>
+    <button id="fiveBtn">📦 Générer 5 vidéos MP4 ZIP</button>
   </div>
 
   <div class="status" id="status">Prêt à créer ton quiz.</div>
   <p class="small">
     Chaque vidéo contient 5 questions. Temps de réflexion : 4 secondes.
-    Affichage de la réponse : 2 secondes minimum.
+    Affichage de la réponse : 2 secondes minimum. Format vidéo : MP4.
   </p>
 </section>
 
@@ -201,8 +201,7 @@ canvas{
 
 /* =====================================================
    BANQUE DE QUESTIONS
-   Chaque question contient ses 4 réponses cohérentes.
-   Une seule proposition est correcte.
+   Chaque question possède ses 4 réponses cohérentes.
 ===================================================== */
 
 const QUESTIONS = [
@@ -522,7 +521,6 @@ let currentQuiz=[];
 let previewTimer=null;
 let usedHistory=JSON.parse(localStorage.getItem("quiz_history")||"[]");
 let imageCache={};
-let voiceCache={};
 
 const voices={
 female:"ff_siwis",
@@ -890,7 +888,7 @@ async function speech(text,voice){
 }
 
 /* =====================================================
-   CRÉATION DE LA VIDÉO
+   CRÉATION DE LA VIDÉO MP4
 ===================================================== */
 
 function wait(ms){
@@ -931,7 +929,7 @@ async function prepareAudio(quiz,introText,voice){
 
     segments.push({
       type:"pause",
-      duration:Math.max(0,REVEAL_SECONDS)
+      duration:REVEAL_SECONDS
     });
   }
 
@@ -945,186 +943,231 @@ async function prepareAudio(quiz,introText,voice){
   return segments;
 }
 
+function getMP4MimeType(){
+  if(!window.MediaRecorder){
+    throw new Error("Ton navigateur ne permet pas l'enregistrement vidéo.");
+  }
+
+  const candidates=[
+    "video/mp4",
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4;codecs=avc1"
+  ];
+
+  if(typeof MediaRecorder.isTypeSupported!=="function"){
+    return "video/mp4";
+  }
+
+  const supported=candidates.find(type=>MediaRecorder.isTypeSupported(type));
+
+  if(!supported){
+    throw new Error(
+      "Ton navigateur ne prend pas en charge l'enregistrement MP4. Essaie avec Safari sur iPhone ou un navigateur compatible MP4."
+    );
+  }
+
+  return supported;
+}
+
 async function renderVideo(quiz,videoNumber=1){
+  const mimeType=getMP4MimeType();
+
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   const audioContext=new AudioContextClass();
   await audioContext.resume();
 
-  const voice=await getVoice();
-  const introText=$("intro").value;
+  try{
+    const voice=await getVoice();
+    const introText=$("intro").value;
 
-  const segments=await prepareAudio(quiz,introText,voice);
+    const segments=await prepareAudio(quiz,introText,voice);
 
-  setStatus("Préparation des images...");
-  await loadImages(quiz);
+    setStatus("Préparation des images...");
+    await loadImages(quiz);
 
-  setStatus("Préparation de la vidéo...");
+    setStatus("Préparation de la vidéo MP4...");
 
-  const decoded=[];
+    const decoded=[];
 
-  for(const segment of segments){
-    if(segment.buffer){
-      const buffer=await audioContext.decodeAudioData(segment.buffer.slice(0));
-      decoded.push({...segment,audio:buffer});
-    }else{
-      decoded.push(segment);
+    for(const segment of segments){
+      if(segment.buffer){
+        const buffer=await audioContext.decodeAudioData(segment.buffer.slice(0));
+        decoded.push({...segment,audio:buffer});
+      }else{
+        decoded.push(segment);
+      }
     }
+
+    const timeline=[];
+    let cursor=0;
+
+    for(const segment of decoded){
+      if(segment.type==="intro"){
+        timeline.push({
+          type:"intro",
+          start:cursor,
+          end:cursor+segment.audio.duration,
+          audio:segment.audio
+        });
+        cursor+=segment.audio.duration;
+      }
+
+      else if(segment.type==="question"){
+        timeline.push({
+          type:"question",
+          index:segment.index,
+          start:cursor,
+          end:cursor+segment.audio.duration,
+          audio:segment.audio
+        });
+        cursor+=segment.audio.duration;
+      }
+
+      else if(segment.type==="think"){
+        timeline.push({
+          type:"think",
+          index:segment.index,
+          start:cursor,
+          end:cursor+segment.duration
+        });
+        cursor+=segment.duration;
+      }
+
+      else if(segment.type==="answer"){
+        const duration=Math.max(REVEAL_SECONDS,segment.audio.duration);
+        timeline.push({
+          type:"answer",
+          index:segment.index,
+          start:cursor,
+          end:cursor+duration,
+          audio:segment.audio
+        });
+        cursor+=duration;
+      }
+
+      else if(segment.type==="pause"){
+        timeline.push({
+          type:"pause",
+          start:cursor,
+          end:cursor+segment.duration
+        });
+        cursor+=segment.duration;
+      }
+
+      else if(segment.type==="end"){
+        timeline.push({
+          type:"end",
+          start:cursor,
+          end:cursor+segment.audio.duration,
+          audio:segment.audio
+        });
+        cursor+=segment.audio.duration;
+      }
+    }
+
+    const totalDuration=cursor+0.5;
+
+    const canvasStream=canvas.captureStream(30);
+    const audioDestination=audioContext.createMediaStreamDestination();
+
+    const stream=new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...audioDestination.stream.getAudioTracks()
+    ]);
+
+    let recorder;
+
+    try{
+      recorder=new MediaRecorder(stream,{
+        mimeType,
+        videoBitsPerSecond:5000000
+      });
+    }catch(error){
+      canvasStream.getTracks().forEach(t=>t.stop());
+      audioDestination.stream.getTracks().forEach(t=>t.stop());
+      throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
+    }
+
+    const chunks=[];
+
+    recorder.ondataavailable=e=>{
+      if(e.data&&e.data.size)chunks.push(e.data);
+    };
+
+    const finished=new Promise((resolve,reject)=>{
+      recorder.onstop=()=>{
+        const actualType=recorder.mimeType||mimeType;
+        resolve(new Blob(chunks,{type:actualType}));
+      };
+      recorder.onerror=()=>{
+        reject(new Error("Erreur d'enregistrement vidéo MP4."));
+      };
+    });
+
+    const startTime=audioContext.currentTime+0.4;
+
+    for(const segment of timeline){
+      if(segment.audio){
+        const source=audioContext.createBufferSource();
+        source.buffer=segment.audio;
+        source.connect(audioDestination);
+        source.start(startTime+segment.start);
+      }
+    }
+
+    recorder.start(250);
+
+    function drawFrame(){
+      const elapsed=audioContext.currentTime-startTime;
+
+      if(elapsed>=totalDuration){
+        if(recorder.state!=="inactive")recorder.stop();
+        return;
+      }
+
+      const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
+
+      if(!segment){
+        background();
+        drawBrand();
+      }else if(segment.type==="intro"){
+        drawIntro(introText);
+      }else if(segment.type==="question"){
+        const q=quiz[segment.index];
+        drawQuestion(q,segment.index,quiz.length,4,false);
+      }else if(segment.type==="think"){
+        const q=quiz[segment.index];
+        const remaining=Math.ceil(segment.end-elapsed);
+        drawQuestion(q,segment.index,quiz.length,remaining,false);
+      }else if(segment.type==="answer"){
+        const q=quiz[segment.index];
+        drawQuestion(q,segment.index,quiz.length,0,true);
+      }else if(segment.type==="end"){
+        drawEnd();
+      }else{
+        background();
+        drawBrand();
+      }
+
+      requestAnimationFrame(drawFrame);
+    }
+
+    drawFrame();
+
+    const blob=await finished;
+
+    canvasStream.getTracks().forEach(t=>t.stop());
+    audioDestination.stream.getTracks().forEach(t=>t.stop());
+
+    if(!blob.size){
+      throw new Error("La vidéo MP4 générée est vide.");
+    }
+
+    return blob;
+
+  }finally{
+    await audioContext.close();
   }
-
-  const timeline=[];
-  let cursor=0;
-
-  for(const segment of decoded){
-    if(segment.type==="intro"){
-      timeline.push({
-        type:"intro",
-        start:cursor,
-        end:cursor+segment.audio.duration,
-        audio:segment.audio
-      });
-      cursor+=segment.audio.duration;
-    }
-
-    else if(segment.type==="question"){
-      timeline.push({
-        type:"question",
-        index:segment.index,
-        start:cursor,
-        end:cursor+segment.audio.duration,
-        audio:segment.audio
-      });
-      cursor+=segment.audio.duration;
-    }
-
-    else if(segment.type==="think"){
-      timeline.push({
-        type:"think",
-        index:segment.index,
-        start:cursor,
-        end:cursor+segment.duration
-      });
-      cursor+=segment.duration;
-    }
-
-    else if(segment.type==="answer"){
-      const duration=Math.max(REVEAL_SECONDS,segment.audio.duration);
-      timeline.push({
-        type:"answer",
-        index:segment.index,
-        start:cursor,
-        end:cursor+duration,
-        audio:segment.audio
-      });
-      cursor+=duration;
-    }
-
-    else if(segment.type==="pause"){
-      timeline.push({
-        type:"pause",
-        start:cursor,
-        end:cursor+segment.duration
-      });
-      cursor+=segment.duration;
-    }
-
-    else if(segment.type==="end"){
-      timeline.push({
-        type:"end",
-        start:cursor,
-        end:cursor+segment.audio.duration,
-        audio:segment.audio
-      });
-      cursor+=segment.audio.duration;
-    }
-  }
-
-  const totalDuration=cursor+0.5;
-
-  const canvasStream=canvas.captureStream(30);
-  const audioDestination=audioContext.createMediaStreamDestination();
-
-  const stream=new MediaStream([
-    ...canvasStream.getVideoTracks(),
-    ...audioDestination.stream.getAudioTracks()
-  ]);
-
-  const mimeTypes=[
-    "video/webm;codecs=vp9,opus",
-    "video/webm;codecs=vp8,opus",
-    "video/webm"
-  ];
-
-  const mimeType=mimeTypes.find(t=>MediaRecorder.isTypeSupported(t))||"video/webm";
-
-  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:5000000});
-  const chunks=[];
-
-  recorder.ondataavailable=e=>{
-    if(e.data&&e.data.size)chunks.push(e.data);
-  };
-
-  const finished=new Promise((resolve,reject)=>{
-    recorder.onstop=()=>resolve(new Blob(chunks,{type:mimeType}));
-    recorder.onerror=()=>reject(new Error("Erreur d'enregistrement vidéo."));
-  });
-
-  const startTime=audioContext.currentTime+0.4;
-
-  for(const segment of timeline){
-    if(segment.audio){
-      const source=audioContext.createBufferSource();
-      source.buffer=segment.audio;
-      source.connect(audioDestination);
-      source.start(startTime+segment.start);
-    }
-  }
-
-  recorder.start(250);
-
-  function drawFrame(){
-    const elapsed=audioContext.currentTime-startTime;
-
-    if(elapsed>=totalDuration){
-      recorder.stop();
-      return;
-    }
-
-    const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
-
-    if(!segment){
-      background();
-      drawBrand();
-    }else if(segment.type==="intro"){
-      drawIntro(introText);
-    }else if(segment.type==="question"){
-      const q=quiz[segment.index];
-      drawQuestion(q,segment.index,quiz.length,4,false);
-    }else if(segment.type==="think"){
-      const q=quiz[segment.index];
-      const remaining=Math.ceil(segment.end-elapsed);
-      drawQuestion(q,segment.index,quiz.length,remaining,false);
-    }else if(segment.type==="answer"){
-      const q=quiz[segment.index];
-      drawQuestion(q,segment.index,quiz.length,0,true);
-    }else if(segment.type==="end"){
-      drawEnd();
-    }else{
-      background();
-      drawBrand();
-    }
-
-    requestAnimationFrame(drawFrame);
-  }
-
-  drawFrame();
-
-  const blob=await finished;
-
-  canvasStream.getTracks().forEach(t=>t.stop());
-  audioDestination.stream.getTracks().forEach(t=>t.stop());
-  await audioContext.close();
-
-  return blob;
 }
 
 /* =====================================================
@@ -1186,7 +1229,7 @@ async function preview(){
 }
 
 /* =====================================================
-   TÉLÉCHARGEMENT
+   TÉLÉCHARGEMENT MP4
 ===================================================== */
 
 function downloadBlob(blob,filename){
@@ -1197,12 +1240,12 @@ function downloadBlob(blob,filename){
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),10000);
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 
 function filename(index){
   const date=new Date().toISOString().slice(0,10);
-  return "quizzzz123_"+date+"_video_"+index+".webm";
+  return "quizzzz123_"+date+"_video_"+index+".mp4";
 }
 
 async function generateOne(){
@@ -1216,9 +1259,12 @@ async function generateOne(){
   $("newQuiz").disabled=true;
 
   try{
+    setStatus("Vérification de la compatibilité MP4...");
+    getMP4MimeType();
+
     const blob=await renderVideo(currentQuiz,1);
     downloadBlob(blob,filename(1));
-    setStatus("Vidéo générée avec succès !");
+    setStatus("Vidéo MP4 générée avec succès !");
   }catch(error){
     console.error(error);
     setStatus("Erreur : "+error.message);
@@ -1237,10 +1283,13 @@ async function generateFive(){
   $("newQuiz").disabled=true;
 
   try{
+    setStatus("Vérification de la compatibilité MP4...");
+    getMP4MimeType();
+
     const zip=new JSZip();
 
     for(let i=1;i<=5;i++){
-      setStatus("Création de la vidéo "+i+"/5...");
+      setStatus("Création de la vidéo MP4 "+i+"/5...");
 
       const quiz=chooseQuiz();
       if(!quiz.length)throw new Error("Impossible de sélectionner les questions.");
@@ -1253,9 +1302,9 @@ async function generateFive(){
 
     setStatus("Création du fichier ZIP...");
     const zipBlob=await zip.generateAsync({type:"blob"});
-    downloadBlob(zipBlob,"quizzzz123_5_videos.zip");
+    downloadBlob(zipBlob,"quizzzz123_5_videos_MP4.zip");
 
-    setStatus("Les 5 vidéos sont prêtes !");
+    setStatus("Les 5 vidéos MP4 sont prêtes !");
   }catch(error){
     console.error(error);
     setStatus("Erreur : "+error.message);
