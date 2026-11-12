@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#090014">
 <title>quizzzz123_ — Créateur de quiz TikTok</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <style>
 :root {
   color-scheme:dark;
@@ -119,6 +120,31 @@ canvas{
 }
 .bank-buttons button{width:100%}
 .file-input{display:none}
+
+/* AJOUT : BARRE DE PROGRESSION */
+.progress-track{
+  width:100%;
+  height:14px;
+  background:#100520;
+  border:1px solid #60358b;
+  border-radius:20px;
+  overflow:hidden;
+  margin:12px 0 8px;
+}
+.progress-fill{
+  width:0%;
+  height:100%;
+  background:linear-gradient(90deg,#9333ea,#ec4899);
+  border-radius:20px;
+  transition:width .35s ease;
+}
+.progress-infos{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  color:#d8c8ed;
+  font-size:13px;
+}
 @media(max-width:500px){
   body{padding:12px}
   .panel{padding:15px}
@@ -128,6 +154,7 @@ canvas{
 }
 </style>
 </head>
+
 <body>
 <div class="container">
 
@@ -181,10 +208,29 @@ canvas{
     <button id="fiveBtn">📦 Générer 5 vidéos MP4 ZIP</button>
   </div>
 
-  <div class="status" id="status">Prêt à créer ton quiz.</div>
+  <div class="status" id="status">Chargement de la banque de questions...</div>
+
   <p class="small">
     Chaque vidéo contient 5 questions. Temps de réflexion : 4 secondes.
     Affichage de la réponse : 2 secondes minimum. Format vidéo : MP4.
+  </p>
+</section>
+
+<!-- AJOUT : PROGRESSION DE LA BANQUE -->
+<section class="panel">
+  <h2>📊 Progression de la banque</h2>
+
+  <div class="progress-infos">
+    <span id="progressCount">0 / 40 questions utilisées</span>
+    <strong id="progressPercent">0 %</strong>
+  </div>
+
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <p class="small" id="progressMessage">
+    Les questions non utilisées sont prioritaires.
   </p>
 </section>
 
@@ -198,6 +244,7 @@ canvas{
 <section class="panel">
   <h2>📚 Historique des questions utilisées</h2>
   <div class="history" id="history">Aucune question utilisée pour le moment.</div>
+
   <button class="secondary" id="clearHistory" style="margin-top:12px;width:100%">
     Effacer l'historique
   </button>
@@ -205,18 +252,23 @@ canvas{
 
 <section class="panel">
   <h2>📦 Banque de questions</h2>
+
   <p class="small">
-    Exporte ta banque pour me l'envoyer dans cette conversation.
-    Je pourrai l'enrichir avec de nouvelles questions sans reprendre les anciennes.
-    Tu pourras ensuite importer la banque actualisée ici.
+    La grande banque sera chargée automatiquement depuis le fichier
+    <b>banque_questions.json</b>, placé à côté de index.html sur GitHub.
+    Tu peux aussi exporter ta banque pour me l'envoyer et importer une
+    banque actualisée.
   </p>
+
   <div class="bank-buttons">
     <button id="exportBank">⬇️ Exporter la banque JSON</button>
     <button class="secondary" id="importBankBtn">📥 Importer une banque JSON</button>
   </div>
+
   <input class="file-input" type="file" id="importBankFile" accept=".json,application/json">
+
   <div class="status" id="bankStatus">
-    Banque actuelle : 40 questions.
+    Banque de secours : 40 questions.
   </div>
 </section>
 
@@ -226,7 +278,7 @@ canvas{
 "use strict";
 
 /* =====================================================
-   BANQUE DE QUESTIONS
+   BANQUE DE QUESTIONS DE SECOURS
 ===================================================== */
 
 let QUESTIONS = [
@@ -545,7 +597,12 @@ const ctx=canvas.getContext("2d");
 let currentQuiz=[];
 let previewTimer=null;
 let usedHistory=[];
+let imageCache={};
 
+/* Source de la banque actuellement chargée */
+let bankSource="secours";
+
+/* Historique */
 try{
   const savedHistory=JSON.parse(localStorage.getItem("quiz_history")||"[]");
   if(Array.isArray(savedHistory))usedHistory=savedHistory;
@@ -553,8 +610,7 @@ try{
   usedHistory=[];
 }
 
-let imageCache={};
-
+/* Voix originales conservées */
 const voices={
   female:"ff_siwis",
   male:"ff_alex"
@@ -573,12 +629,6 @@ function setStatus(message){
   $("status").textContent=message;
 }
 
-function updateHistory(){
-  $("history").innerHTML=usedHistory.length
-    ? usedHistory.slice(-100).reverse().map(x=>"• "+escapeHTML(x)).join("<br>")
-    : "Aucune question utilisée pour le moment.";
-}
-
 function escapeHTML(str){
   return String(str).replace(/[&<>"']/g,c=>({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
@@ -586,34 +636,121 @@ function escapeHTML(str){
 }
 
 /* =====================================================
-   VALIDATION ET SAUVEGARDE DE LA BANQUE
+   NOUVEAU : COMPTEUR ET BARRE DE PROGRESSION
+===================================================== */
+
+function updateProgress(){
+
+  /*
+    On ne compte que les identifiants présents dans
+    la banque actuellement chargée.
+
+    Si la banque passe de 40 à 40 000 questions,
+    le pourcentage est recalculé automatiquement.
+  */
+
+  const currentIds=new Set(QUESTIONS.map(q=>q.id));
+
+  const usedIds=new Set(
+    usedHistory.filter(id=>currentIds.has(id))
+  );
+
+  const total=QUESTIONS.length;
+  const used=usedIds.size;
+
+  const percentage=total
+    ? Math.min(100,Math.round((used/total)*100))
+    : 0;
+
+  $("progressCount").textContent=
+    used.toLocaleString("fr-FR")+" / "+
+    total.toLocaleString("fr-FR")+" questions utilisées";
+
+  $("progressPercent").textContent=percentage+" %";
+  $("progressFill").style.width=percentage+"%";
+
+  if(used>=total){
+    $("progressMessage").textContent=
+      "Toutes les questions ont été utilisées. Le cycle recommence avec la banque complète.";
+  }else{
+    $("progressMessage").textContent=
+      "Les questions jamais utilisées sont prioritaires. Les anciennes reviennent uniquement lorsque nécessaire.";
+  }
+}
+
+/* =====================================================
+   HISTORIQUE
+===================================================== */
+
+function updateHistory(){
+  $("history").innerHTML=usedHistory.length
+    ? usedHistory.slice(-100).reverse().map(x=>"• "+escapeHTML(x)).join("<br>")
+    : "Aucune question utilisée pour le moment.";
+
+  updateProgress();
+}
+
+function saveHistory(){
+  try{
+    localStorage.setItem("quiz_history",JSON.stringify(usedHistory));
+  }catch(e){
+    console.warn("Impossible de sauvegarder tout l'historique :",e);
+  }
+
+  updateHistory();
+}
+
+/* =====================================================
+   VALIDATION DE LA BANQUE
 ===================================================== */
 
 function validateQuestion(q){
-  if(!q||typeof q!=="object")throw new Error("Question invalide.");
-  if(typeof q.id!=="string"||!q.id.trim())throw new Error("Identifiant de question manquant.");
-  if(typeof q.theme!=="string"||!q.theme.trim())throw new Error("Thème manquant : "+q.id);
-  if(!["FACILE","MOYEN","DIFFICILE"].includes(q.level))throw new Error("Difficulté invalide : "+q.id);
-  if(typeof q.question!=="string"||!q.question.trim())throw new Error("Texte de question manquant : "+q.id);
-  if(typeof q.answer!=="string"||!q.answer.trim())throw new Error("Réponse manquante : "+q.id);
+
+  if(!q||typeof q!=="object")
+    throw new Error("Question invalide.");
+
+  if(typeof q.id!=="string"||!q.id.trim())
+    throw new Error("Identifiant de question manquant.");
+
+  if(typeof q.theme!=="string"||!q.theme.trim())
+    throw new Error("Thème manquant : "+q.id);
+
+  if(!["FACILE","MOYEN","DIFFICILE"].includes(q.level))
+    throw new Error("Difficulté invalide : "+q.id);
+
+  if(typeof q.question!=="string"||!q.question.trim())
+    throw new Error("Texte de question manquant : "+q.id);
+
+  if(typeof q.answer!=="string"||!q.answer.trim())
+    throw new Error("Réponse manquante : "+q.id);
+
   if(!Array.isArray(q.options)||q.options.length!==4){
     throw new Error("Une question ne possède pas exactement 4 propositions : "+q.id);
   }
+
   if(!q.options.every(o=>typeof o==="string"&&o.trim())){
     throw new Error("Une proposition est invalide : "+q.id);
   }
+
   if(!q.options.includes(q.answer)){
     throw new Error("La bonne réponse manque dans les propositions : "+q.id);
   }
+
   if(new Set(q.options).size!==4){
     throw new Error("Une question contient des propositions en double : "+q.id);
   }
-  if(typeof q.image!=="string")throw new Error("Image manquante : "+q.id);
-  if(typeof q.emoji!=="string")throw new Error("Emoji manquant : "+q.id);
+
+  if(typeof q.image!=="string")
+    throw new Error("Image manquante : "+q.id);
+
+  if(typeof q.emoji!=="string")
+    throw new Error("Emoji manquant : "+q.id);
+
   return true;
 }
 
 function validateBank(bank){
+
   if(!Array.isArray(bank)||bank.length<5){
     throw new Error("La banque doit contenir au moins 5 questions.");
   }
@@ -622,37 +759,112 @@ function validateBank(bank){
 
   bank.forEach(q=>{
     validateQuestion(q);
+
     if(ids.has(q.id)){
       throw new Error("Identifiant en double : "+q.id);
     }
+
     ids.add(q.id);
   });
 
   return true;
 }
 
-function loadSavedBank(){
-  try{
-    const saved=localStorage.getItem("quiz_question_bank");
-    if(!saved)return;
+/* =====================================================
+   NOUVEAU : CHARGEMENT AUTOMATIQUE DU JSON GITHUB
+===================================================== */
 
-    const data=JSON.parse(saved);
-    const bank=Array.isArray(data)?data:data.questions;
+async function loadRemoteBank(){
+
+  try{
+
+    $("bankStatus").textContent=
+      "Chargement de la banque distante...";
+
+    setStatus("Chargement de la banque de questions depuis GitHub...");
+
+    /*
+      Le fichier doit être placé à la racine du dépôt,
+      au même niveau que index.html.
+    */
+
+    const response=await fetch(
+      "./banque_questions.json?v="+Date.now(),
+      {cache:"no-store"}
+    );
+
+    if(!response.ok){
+      throw new Error(
+        "Fichier banque_questions.json introuvable (HTTP "+response.status+")."
+      );
+    }
+
+    const data=await response.json();
+
+    const bank=Array.isArray(data)
+      ? data
+      : data.questions;
 
     validateBank(bank);
-    QUESTIONS=bank;
+
+    /*
+      On conserve les anciens identifiants de l'historique.
+      Les questions ajoutées dans la nouvelle banque
+      seront donc considérées comme jamais utilisées.
+    */
+
+    QUESTIONS=bank.map(q=>({
+      id:q.id,
+      theme:q.theme,
+      level:q.level,
+      question:q.question,
+      answer:q.answer,
+      options:[...q.options],
+      image:q.image,
+      emoji:q.emoji
+    }));
+
+    bankSource="GitHub";
+
+    currentQuiz=[];
+    imageCache={};
+
+    $("bankStatus").textContent=
+      "Banque GitHub chargée : "+
+      QUESTIONS.length.toLocaleString("fr-FR")+" questions.";
+
+    setStatus(
+      "Banque chargée avec succès : "+
+      QUESTIONS.length.toLocaleString("fr-FR")+
+      " questions disponibles !"
+    );
+
+    updateHistory();
+
   }catch(error){
-    console.warn("Banque sauvegardée non chargée :",error);
+
+    console.warn("Chargement de la banque distante impossible :",error);
+
+    $("bankStatus").textContent=
+      "Banque de secours active : "+
+      QUESTIONS.length+
+      " questions. Le fichier JSON distant n'a pas encore été chargé.";
+
+    setStatus(
+      "Prêt avec les 40 questions de secours. "+
+      "La grande banque sera activée dès que banque_questions.json sera ajouté sur GitHub."
+    );
+
+    updateHistory();
   }
 }
-
-loadSavedBank();
 
 /* =====================================================
    SÉLECTION DES QUESTIONS
 ===================================================== */
 
 function chooseQuiz(){
+
   const theme=$("theme").value;
   const difficulty=$("difficulty").value;
 
@@ -672,8 +884,16 @@ function chooseQuiz(){
   let selected;
 
   if(unused.length>=5){
+
     selected=shuffle(unused).slice(0,5);
+
   }else{
+
+    /*
+      On utilise d'abord toutes les questions encore inédites,
+      puis on complète avec les anciennes si nécessaire.
+    */
+
     selected=[
       ...shuffle(unused),
       ...shuffle(alreadyUsed)
@@ -683,11 +903,12 @@ function chooseQuiz(){
   selected.forEach(validateQuestion);
 
   selected.forEach(q=>{
-    if(!usedHistory.includes(q.id))usedHistory.push(q.id);
+    if(!usedHistory.includes(q.id)){
+      usedHistory.push(q.id);
+    }
   });
 
-  localStorage.setItem("quiz_history",JSON.stringify(usedHistory));
-  updateHistory();
+  saveHistory();
 
   return selected.map(q=>({
     ...q,
@@ -707,12 +928,15 @@ function roundedRect(x,y,w,h,r,color){
 }
 
 function wrapText(text,x,y,maxWidth,lineHeight,maxLines=3){
+
   const words=String(text).split(" ");
   let line="";
   let lines=[];
 
   for(const word of words){
+
     const test=line?line+" "+word:word;
+
     if(ctx.measureText(test).width>maxWidth&&line){
       lines.push(line);
       line=word;
@@ -720,32 +944,43 @@ function wrapText(text,x,y,maxWidth,lineHeight,maxLines=3){
       line=test;
     }
   }
+
   if(line)lines.push(line);
 
   lines=lines.slice(0,maxLines);
-  lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));
+
+  lines.forEach((l,i)=>{
+    ctx.fillText(l,x,y+i*lineHeight);
+  });
+
   return lines.length;
 }
 
 function background(){
+
   const gradient=ctx.createLinearGradient(0,0,W,H);
+
   gradient.addColorStop(0,"#210b42");
   gradient.addColorStop(.5,"#090014");
   gradient.addColorStop(1,"#300b4e");
+
   ctx.fillStyle=gradient;
   ctx.fillRect(0,0,W,H);
 
   ctx.globalAlpha=.12;
   ctx.fillStyle="#d8a5ff";
+
   for(let i=0;i<14;i++){
     ctx.beginPath();
     ctx.arc((i*197)%W,(i*311)%H,70+(i%3)*20,0,Math.PI*2);
     ctx.fill();
   }
+
   ctx.globalAlpha=1;
 }
 
 function drawBrand(){
+
   ctx.textAlign="center";
   ctx.fillStyle="#e9c6ff";
   ctx.font="bold 42px Arial";
@@ -753,12 +988,14 @@ function drawBrand(){
 }
 
 function drawIntro(text){
+
   background();
   drawBrand();
 
   ctx.textAlign="center";
   ctx.fillStyle="#fff";
   ctx.font="bold 78px Arial";
+
   wrapText(text,W/2,650,850,100,3);
 
   ctx.font="bold 48px Arial";
@@ -771,6 +1008,7 @@ function drawIntro(text){
 }
 
 function drawQuestion(q,index,total,timeLeft,answerVisible=false){
+
   background();
   drawBrand();
 
@@ -786,16 +1024,20 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
   const img=imageCache[q.id];
 
   if(img&&img.complete&&img.naturalWidth){
+
     const maxW=650,maxH=410;
     const ratio=Math.min(maxW/img.width,maxH/img.height);
     const iw=img.width*ratio,ih=img.height*ratio;
+
     ctx.save();
     ctx.beginPath();
     ctx.roundRect((W-iw)/2,320,iw,ih,25);
     ctx.clip();
     ctx.drawImage(img,(W-iw)/2,320,iw,ih);
     ctx.restore();
+
   }else{
+
     ctx.font="150px Arial";
     ctx.fillText(q.emoji||"❓",W/2,580);
   }
@@ -809,14 +1051,21 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
   ];
 
   q.options.forEach((option,i)=>{
+
     const [x,y]=positions[i];
     let color="#251044";
 
-    if(answerVisible&&option===q.answer)color="#146c43";
+    if(answerVisible&&option===q.answer){
+      color="#146c43";
+    }
 
     roundedRect(x,y,450,185,24,color);
 
-    ctx.strokeStyle=answerVisible&&option===q.answer?"#5dffae":"#7542a0";
+    ctx.strokeStyle=
+      answerVisible&&option===q.answer
+      ?"#5dffae"
+      :"#7542a0";
+
     ctx.lineWidth=5;
     ctx.stroke();
 
@@ -827,10 +1076,13 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
   });
 
   if(answerVisible){
+
     ctx.fillStyle="#70ffb0";
     ctx.font="bold 45px Arial";
     ctx.fillText("LA BONNE RÉPONSE !",W/2,1660);
+
   }else{
+
     ctx.fillStyle="#fff";
     ctx.font="bold 75px Arial";
     ctx.fillText(Math.max(0,timeLeft),W/2,1660);
@@ -842,15 +1094,19 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
 }
 
 function drawEnd(){
+
   background();
   drawBrand();
+
   ctx.textAlign="center";
   ctx.fillStyle="#fff";
   ctx.font="bold 90px Arial";
   ctx.fillText("BRAVO !",W/2,750);
+
   ctx.font="bold 54px Arial";
   ctx.fillStyle="#e4c4ff";
   ctx.fillText("Combien de bonnes réponses ?",W/2,900);
+
   ctx.font="bold 48px Arial";
   ctx.fillText("Abonne-toi pour les prochains quiz !",W/2,1450);
 }
@@ -860,19 +1116,24 @@ function drawEnd(){
 ===================================================== */
 
 async function loadQuestionImage(q){
+
   if(imageCache[q.id])return imageCache[q.id];
 
   try{
+
     const url="https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch="+
-      encodeURIComponent(q.image)+"&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*";
+      encodeURIComponent(q.image)+
+      "&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*";
 
     const response=await fetch(url);
     const data=await response.json();
     const pages=data.query?.pages;
+
     if(!pages)return null;
 
     const page=Object.values(pages)[0];
     const imageURL=page.imageinfo?.[0]?.thumburl||page.imageinfo?.[0]?.url;
+
     if(!imageURL)return null;
 
     const img=new Image();
@@ -885,8 +1146,11 @@ async function loadQuestionImage(q){
     });
 
     imageCache[q.id]=img;
+
     return img;
+
   }catch(e){
+
     console.warn("Image indisponible pour",q.id,e);
     return null;
   }
@@ -901,6 +1165,7 @@ async function loadImages(quiz){
 ===================================================== */
 
 async function getVoice(){
+
   const gender=$("voice").value;
 
   /*
@@ -908,12 +1173,14 @@ async function getVoice(){
     évite de sélectionner au hasard une voix française
     qui pourrait avoir un accent différent.
   */
+
   if(gender==="female")return "ff_siwis";
 
   return voices.male;
 }
 
 async function speech(text,voice){
+
   const response=await fetch("https://api.tts.ai/v1/tts/",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -934,15 +1201,24 @@ async function speech(text,voice){
   const data=await response.json();
 
   if(data.audio_url||data.url){
+
     const audioResponse=await fetch(data.audio_url||data.url);
-    if(!audioResponse.ok)throw new Error("Impossible de récupérer l'audio.");
+
+    if(!audioResponse.ok){
+      throw new Error("Impossible de récupérer l'audio.");
+    }
+
     return await audioResponse.arrayBuffer();
   }
 
   const uuid=data.uuid||data.id;
-  if(!uuid)throw new Error("Réponse vocale invalide.");
+
+  if(!uuid){
+    throw new Error("Réponse vocale invalide.");
+  }
 
   for(let i=0;i<40;i++){
+
     await new Promise(resolve=>setTimeout(resolve,1500));
 
     const result=await fetch(
@@ -952,12 +1228,16 @@ async function speech(text,voice){
     if(!result.ok)continue;
 
     const resultData=await result.json();
+
     const audioURL=resultData.audio_url||resultData.url||
       resultData.result?.audio_url||resultData.result?.url;
 
     if(audioURL){
+
       const audioResponse=await fetch(audioURL);
+
       if(!audioResponse.ok)continue;
+
       return await audioResponse.arrayBuffer();
     }
 
@@ -978,14 +1258,20 @@ function wait(ms){
 }
 
 async function prepareAudio(quiz,introText,voice){
+
   const segments=[];
 
   setStatus("Préparation de la voix...");
 
   const introBuffer=await speech(introText,voice);
-  segments.push({type:"intro",buffer:introBuffer});
+
+  segments.push({
+    type:"intro",
+    buffer:introBuffer
+  });
 
   for(let i=0;i<quiz.length;i++){
+
     setStatus("Création des voix : question "+(i+1)+"/5");
 
     const questionBuffer=await speech(quiz[i].question,voice);
@@ -1007,6 +1293,7 @@ async function prepareAudio(quiz,introText,voice){
       La réponse reste affichée au moins 2 secondes.
       Il n'y a plus de segment pause avec écran vide.
     */
+
     segments.push({
       type:"answer",
       index:i,
@@ -1019,12 +1306,16 @@ async function prepareAudio(quiz,introText,voice){
     voice
   );
 
-  segments.push({type:"end",buffer:endBuffer});
+  segments.push({
+    type:"end",
+    buffer:endBuffer
+  });
 
   return segments;
 }
 
 function getMP4MimeType(){
+
   if(!window.MediaRecorder){
     throw new Error("Ton navigateur ne permet pas l'enregistrement vidéo.");
   }
@@ -1051,16 +1342,19 @@ function getMP4MimeType(){
 }
 
 async function renderVideo(quiz,videoNumber=1){
+
   const mimeType=getMP4MimeType();
 
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   const audioContext=new AudioContextClass();
+
   await audioContext.resume();
 
   let canvasStream=null;
   let audioDestination=null;
 
   try{
+
     const voice=await getVoice();
     const introText=$("intro").value;
 
@@ -1074,10 +1368,18 @@ async function renderVideo(quiz,videoNumber=1){
     const decoded=[];
 
     for(const segment of segments){
+
       if(segment.buffer){
+
         const buffer=await audioContext.decodeAudioData(segment.buffer.slice(0));
-        decoded.push({...segment,audio:buffer});
+
+        decoded.push({
+          ...segment,
+          audio:buffer
+        });
+
       }else{
+
         decoded.push(segment);
       }
     }
@@ -1086,17 +1388,21 @@ async function renderVideo(quiz,videoNumber=1){
     let cursor=0;
 
     for(const segment of decoded){
+
       if(segment.type==="intro"){
+
         timeline.push({
           type:"intro",
           start:cursor,
           end:cursor+segment.audio.duration,
           audio:segment.audio
         });
+
         cursor+=segment.audio.duration;
       }
 
       else if(segment.type==="question"){
+
         timeline.push({
           type:"question",
           index:segment.index,
@@ -1104,20 +1410,24 @@ async function renderVideo(quiz,videoNumber=1){
           end:cursor+segment.audio.duration,
           audio:segment.audio
         });
+
         cursor+=segment.audio.duration;
       }
 
       else if(segment.type==="think"){
+
         timeline.push({
           type:"think",
           index:segment.index,
           start:cursor,
           end:cursor+segment.duration
         });
+
         cursor+=segment.duration;
       }
 
       else if(segment.type==="answer"){
+
         const duration=Math.max(REVEAL_SECONDS,segment.audio.duration);
 
         timeline.push({
@@ -1132,12 +1442,14 @@ async function renderVideo(quiz,videoNumber=1){
       }
 
       else if(segment.type==="end"){
+
         timeline.push({
           type:"end",
           start:cursor,
           end:cursor+segment.audio.duration,
           audio:segment.audio
         });
+
         cursor+=segment.audio.duration;
       }
     }
@@ -1146,6 +1458,7 @@ async function renderVideo(quiz,videoNumber=1){
       La vidéo s'arrête exactement à la fin du dernier segment.
       Aucun délai supplémentaire de 0,5 seconde.
     */
+
     const totalDuration=cursor;
 
     canvasStream=canvas.captureStream(30);
@@ -1159,11 +1472,14 @@ async function renderVideo(quiz,videoNumber=1){
     let recorder;
 
     try{
+
       recorder=new MediaRecorder(stream,{
         mimeType,
         videoBitsPerSecond:5000000
       });
+
     }catch(error){
+
       throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
     }
 
@@ -1174,10 +1490,12 @@ async function renderVideo(quiz,videoNumber=1){
     };
 
     const finished=new Promise((resolve,reject)=>{
+
       recorder.onstop=()=>{
         const actualType=recorder.mimeType||mimeType;
         resolve(new Blob(chunks,{type:actualType}));
       };
+
       recorder.onerror=()=>{
         reject(new Error("Erreur d'enregistrement vidéo MP4."));
       };
@@ -1186,8 +1504,11 @@ async function renderVideo(quiz,videoNumber=1){
     const startTime=audioContext.currentTime+0.4;
 
     for(const segment of timeline){
+
       if(segment.audio){
+
         const source=audioContext.createBufferSource();
+
         source.buffer=segment.audio;
         source.connect(audioDestination);
         source.start(startTime+segment.start);
@@ -1198,14 +1519,18 @@ async function renderVideo(quiz,videoNumber=1){
       Prépare l'écran d'introduction pendant le court
       démarrage technique de l'enregistrement.
     */
+
     drawIntro(introText);
     recorder.start(250);
 
     function drawFrame(){
+
       const elapsed=audioContext.currentTime-startTime;
 
       if(elapsed>=totalDuration){
+
         if(recorder.state!=="inactive")recorder.stop();
+
         return;
       }
 
@@ -1214,32 +1539,49 @@ async function renderVideo(quiz,videoNumber=1){
         Les segments sont continus : pas d'écran vide
         entre la réponse et la prochaine question.
       */
+
       if(elapsed<0){
+
         drawIntro(introText);
         requestAnimationFrame(drawFrame);
+
         return;
       }
 
       const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
 
       if(!segment){
+
         if(recorder.state!=="inactive")recorder.stop();
+
         return;
       }
 
       if(segment.type==="intro"){
+
         drawIntro(introText);
+
       }else if(segment.type==="question"){
+
         const q=quiz[segment.index];
+
         drawQuestion(q,segment.index,quiz.length,4,false);
+
       }else if(segment.type==="think"){
+
         const q=quiz[segment.index];
         const remaining=Math.ceil(segment.end-elapsed);
+
         drawQuestion(q,segment.index,quiz.length,remaining,false);
+
       }else if(segment.type==="answer"){
+
         const q=quiz[segment.index];
+
         drawQuestion(q,segment.index,quiz.length,0,true);
+
       }else if(segment.type==="end"){
+
         drawEnd();
       }
 
@@ -1257,8 +1599,15 @@ async function renderVideo(quiz,videoNumber=1){
     return blob;
 
   }finally{
-    if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());
-    if(audioDestination)audioDestination.stream.getTracks().forEach(t=>t.stop());
+
+    if(canvasStream){
+      canvasStream.getTracks().forEach(t=>t.stop());
+    }
+
+    if(audioDestination){
+      audioDestination.stream.getTracks().forEach(t=>t.stop());
+    }
+
     await audioContext.close();
   }
 }
@@ -1268,6 +1617,7 @@ async function renderVideo(quiz,videoNumber=1){
 ===================================================== */
 
 function stopPreview(){
+
   if(previewTimer){
     clearInterval(previewTimer);
     previewTimer=null;
@@ -1275,6 +1625,7 @@ function stopPreview(){
 }
 
 async function preview(){
+
   if(!currentQuiz.length){
     currentQuiz=chooseQuiz();
   }
@@ -1282,17 +1633,25 @@ async function preview(){
   if(!currentQuiz.length)return;
 
   stopPreview();
+
   await loadImages(currentQuiz);
 
   let step=0;
   let start=Date.now();
 
   function draw(){
+
     const elapsed=(Date.now()-start)/1000;
 
     if(step===0){
+
       drawIntro($("intro").value);
-      if(elapsed>=2){step=1;start=Date.now();}
+
+      if(elapsed>=2){
+        step=1;
+        start=Date.now();
+      }
+
       return;
     }
 
@@ -1300,24 +1659,39 @@ async function preview(){
     const isAnswer=step%2===0;
 
     if(questionIndex>=currentQuiz.length){
+
       drawEnd();
       stopPreview();
+
       return;
     }
 
     const q=currentQuiz[questionIndex];
 
     if(isAnswer){
+
       drawQuestion(q,questionIndex,5,0,true);
-      if(elapsed>=REVEAL_SECONDS){step++;start=Date.now();}
+
+      if(elapsed>=REVEAL_SECONDS){
+        step++;
+        start=Date.now();
+      }
+
     }else{
+
       const remaining=Math.max(0,THINK_SECONDS-Math.floor(elapsed));
+
       drawQuestion(q,questionIndex,5,remaining,false);
-      if(elapsed>=THINK_SECONDS){step++;start=Date.now();}
+
+      if(elapsed>=THINK_SECONDS){
+        step++;
+        start=Date.now();
+      }
     }
   }
 
   draw();
+
   previewTimer=setInterval(draw,100);
 }
 
@@ -1326,25 +1700,33 @@ async function preview(){
 ===================================================== */
 
 function downloadBlob(blob,filename){
+
   const url=URL.createObjectURL(blob);
+
   const a=document.createElement("a");
   a.href=url;
   a.download=filename;
+
   document.body.appendChild(a);
   a.click();
   a.remove();
+
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 
 function filename(index){
+
   const date=new Date().toISOString().slice(0,10);
+
   return "quizzzz123_"+date+"_video_"+index+".mp4";
 }
 
 async function generateOne(){
+
   stopPreview();
 
   if(!currentQuiz.length)currentQuiz=chooseQuiz();
+
   if(!currentQuiz.length)return;
 
   $("oneBtn").disabled=true;
@@ -1352,16 +1734,24 @@ async function generateOne(){
   $("newQuiz").disabled=true;
 
   try{
+
     setStatus("Vérification de la compatibilité MP4...");
+
     getMP4MimeType();
 
     const blob=await renderVideo(currentQuiz,1);
+
     downloadBlob(blob,filename(1));
+
     setStatus("Vidéo MP4 générée avec succès !");
+
   }catch(error){
+
     console.error(error);
     setStatus("Erreur : "+error.message);
+
   }finally{
+
     $("oneBtn").disabled=false;
     $("fiveBtn").disabled=false;
     $("newQuiz").disabled=false;
@@ -1369,6 +1759,7 @@ async function generateOne(){
 }
 
 async function generateFive(){
+
   stopPreview();
 
   $("oneBtn").disabled=true;
@@ -1376,32 +1767,45 @@ async function generateFive(){
   $("newQuiz").disabled=true;
 
   try{
+
     setStatus("Vérification de la compatibilité MP4...");
+
     getMP4MimeType();
 
     const zip=new JSZip();
 
     for(let i=1;i<=5;i++){
+
       setStatus("Création de la vidéo MP4 "+i+"/5...");
 
       const quiz=chooseQuiz();
-      if(!quiz.length)throw new Error("Impossible de sélectionner les questions.");
+
+      if(!quiz.length){
+        throw new Error("Impossible de sélectionner les questions.");
+      }
 
       const blob=await renderVideo(quiz,i);
+
       zip.file(filename(i),blob);
 
       if(i<5)await wait(500);
     }
 
     setStatus("Création du fichier ZIP...");
+
     const zipBlob=await zip.generateAsync({type:"blob"});
+
     downloadBlob(zipBlob,"quizzzz123_5_videos_MP4.zip");
 
     setStatus("Les 5 vidéos MP4 sont prêtes !");
+
   }catch(error){
+
     console.error(error);
     setStatus("Erreur : "+error.message);
+
   }finally{
+
     $("oneBtn").disabled=false;
     $("fiveBtn").disabled=false;
     $("newQuiz").disabled=false;
@@ -1413,7 +1817,9 @@ async function generateFive(){
 ===================================================== */
 
 function exportBank(){
+
   try{
+
     validateBank(QUESTIONS);
 
     const data={
@@ -1430,11 +1836,14 @@ function exportBank(){
     );
 
     const date=new Date().toISOString().slice(0,10);
+
     downloadBlob(blob,"quizzzz123_banque_questions_"+date+".json");
 
     $("bankStatus").textContent=
       "Export réussi : "+QUESTIONS.length+" questions enregistrées.";
+
   }catch(error){
+
     $("bankStatus").textContent="Erreur d'export : "+error.message;
   }
 }
@@ -1444,11 +1853,14 @@ function exportBank(){
 ===================================================== */
 
 async function importBank(file){
+
   if(!file)return;
 
   try{
+
     const text=await file.text();
     const data=JSON.parse(text);
+
     const bank=Array.isArray(data)?data:data.questions;
 
     validateBank(bank);
@@ -1471,28 +1883,53 @@ async function importBank(file){
       emoji:q.emoji
     }));
 
-    localStorage.setItem(
-      "quiz_question_bank",
-      JSON.stringify({
-        version:1,
-        questions:QUESTIONS
-      })
-    );
+    /*
+      On conserve la sauvegarde locale pour les banques
+      de taille raisonnable. Si le navigateur refuse
+      le stockage (quota dépassé), la banque reste
+      quand même chargée pour la session actuelle.
+    */
+
+    try{
+
+      localStorage.setItem(
+        "quiz_question_bank",
+        JSON.stringify({
+          version:1,
+          questions:QUESTIONS
+        })
+      );
+
+    }catch(storageError){
+
+      console.warn(
+        "Banque trop volumineuse pour le stockage local. Elle reste active pour cette session.",
+        storageError
+      );
+    }
+
+    bankSource="import";
 
     currentQuiz=[];
     imageCache={};
 
     $("bankStatus").textContent=
       "Import réussi : "+QUESTIONS.length+
-      " questions sauvegardées sur cet appareil.";
+      " questions chargées.";
 
     setStatus("Nouvelle banque de questions importée avec succès !");
 
+    updateHistory();
+
   }catch(error){
+
     console.error(error);
+
     $("bankStatus").textContent=
       "Import impossible : "+error.message;
+
   }finally{
+
     $("importBankFile").value="";
   }
 }
@@ -1502,24 +1939,35 @@ async function importBank(file){
 ===================================================== */
 
 $("newQuiz").addEventListener("click",()=>{
+
   stopPreview();
+
   currentQuiz=chooseQuiz();
 
   if(currentQuiz.length){
+
     drawQuestion(currentQuiz[0],0,5,4,false);
+
     setStatus("Nouveau quiz créé : 5 questions prêtes !");
   }
 });
 
 $("previewBtn").addEventListener("click",preview);
+
 $("oneBtn").addEventListener("click",generateOne);
+
 $("fiveBtn").addEventListener("click",generateFive);
 
 $("clearHistory").addEventListener("click",()=>{
+
   if(confirm("Effacer tout l'historique des questions utilisées ?")){
+
     usedHistory=[];
+
     localStorage.removeItem("quiz_history");
+
     updateHistory();
+
     setStatus("Historique effacé.");
   }
 });
@@ -1531,17 +1979,29 @@ $("importBankBtn").addEventListener("click",()=>{
 });
 
 $("importBankFile").addEventListener("change",event=>{
+
   const file=event.target.files?.[0];
+
   importBank(file);
 });
+
+/* INITIALISATION */
 
 updateHistory();
 
 $("bankStatus").textContent=
-  "Banque actuelle : "+QUESTIONS.length+" questions.";
+  "Banque de secours : "+QUESTIONS.length+" questions. Chargement de la banque distante...";
 
 drawIntro("Teste tes connaissances !");
+
+/*
+  On lance le chargement distant après l'affichage
+  initial pour que le site reste utilisable même
+  si le fichier JSON n'existe pas encore.
+*/
+
+loadRemoteBank();
+
 </script>
 </body>
 </html>
-
