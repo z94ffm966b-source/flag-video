@@ -564,9 +564,9 @@ function buildTimeline(segments){
  const outroStart=cursor;
  addAudio(outro);
  cursor+=outro.duration;
- addScene("end",outroStart,cursor+2);
+ addScene("end",outroStart,cursor+4);
 
- totalDuration=cursor+2;
+ totalDuration=cursor+4;
 }
 
 async function recordOneVideo(){
