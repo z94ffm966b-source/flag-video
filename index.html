@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -144,6 +143,46 @@ canvas{
   color:#d8c8ed;
   font-size:13px;
 }
+.theme-progress-list{
+  display:flex;
+  flex-direction:column;
+  gap:17px;
+  margin-top:18px;
+}
+.theme-progress-item{
+  background:#100520;
+  border:1px solid #60358b;
+  border-radius:12px;
+  padding:12px;
+}
+.theme-progress-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  font-size:14px;
+  font-weight:bold;
+}
+.theme-progress-count{
+  color:#d8c8ed;
+  white-space:nowrap;
+  font-size:13px;
+}
+.theme-progress-track{
+  width:100%;
+  height:10px;
+  background:#241044;
+  border-radius:20px;
+  overflow:hidden;
+  margin-top:10px;
+}
+.theme-progress-fill{
+  width:0%;
+  height:100%;
+  background:linear-gradient(90deg,#9333ea,#ec4899);
+  border-radius:20px;
+  transition:width .35s ease;
+}
 @media(max-width:500px){
   body{padding:12px}
   .panel{padding:15px}
@@ -230,6 +269,90 @@ canvas{
   <p class="small" id="progressMessage">
     Les questions non utilisées sont prioritaires.
   </p>
+
+  <div class="theme-progress-list" id="themeProgressList">
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>🌍 Géographie</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>💻 Technologie</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>🧠 Culture générale</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>📜 Histoire</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>🔬 Sciences</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>⚽ Sport</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>🎬 Cinéma et séries</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="theme-progress-item">
+      <div class="theme-progress-top">
+        <span>🐾 Animaux</span>
+        <span class="theme-progress-count">0 / 100</span>
+      </div>
+      <div class="theme-progress-track">
+        <div class="theme-progress-fill"></div>
+      </div>
+    </div>
+
+  </div>
 </section>
 
 <section class="panel">
@@ -590,6 +713,17 @@ let usedHistory=[];
 let imageCache={};
 let bankSource="secours";
 
+const THEMES=[
+  {name:"Géographie",emoji:"🌍"},
+  {name:"Technologie",emoji:"💻"},
+  {name:"Culture générale",emoji:"🧠"},
+  {name:"Histoire",emoji:"📜"},
+  {name:"Sciences",emoji:"🔬"},
+  {name:"Sport",emoji:"⚽"},
+  {name:"Cinéma et séries",emoji:"🎬"},
+  {name:"Animaux",emoji:"🐾"}
+];
+
 try{
   const savedHistory=JSON.parse(localStorage.getItem("quiz_history")||"[]");
   if(Array.isArray(savedHistory))usedHistory=savedHistory;
@@ -622,27 +756,20 @@ function escapeHTML(str){
 }
 
 /* =====================================================
-   PROGRESSION PAR THÈME
+   PROGRESSION GLOBALE ET PAR THÈME
 ===================================================== */
 
 function updateProgress(){
 
-  const selectedTheme=$("theme").value;
+  // Progression générale de toute la banque
+  const allIds=new Set(QUESTIONS.map(q=>q.id));
 
-  // On prend toute la banque du thème sélectionné
-  const pool=QUESTIONS.filter(q=>
-    selectedTheme==="TOUS" || q.theme===selectedTheme
+  const allUsedIds=new Set(
+    usedHistory.filter(id=>allIds.has(id))
   );
 
-  const currentIds=new Set(pool.map(q=>q.id));
-
-  // On compte uniquement les questions de ce thème
-  const usedIds=new Set(
-    usedHistory.filter(id=>currentIds.has(id))
-  );
-
-  const total=pool.length;
-  const used=usedIds.size;
+  const total=QUESTIONS.length;
+  const used=allUsedIds.size;
 
   const percentage=total
     ? Math.min(100,Math.round((used/total)*100))
@@ -657,11 +784,44 @@ function updateProgress(){
 
   if(used>=total && total>0){
     $("progressMessage").textContent=
-      "Toutes les questions de ce thème ont été utilisées. Le cycle recommence.";
+      "Toute la banque a été utilisée. Le cycle recommence avec les questions déjà utilisées.";
   }else{
     $("progressMessage").textContent=
-      "Les questions jamais utilisées de ce thème sont prioritaires.";
+      "Les questions jamais utilisées sont prioritaires. Les 8 compteurs ci-dessous sont actualisés automatiquement.";
   }
+
+  // Progression indépendante des 8 thèmes
+  const list=$("themeProgressList");
+  const items=list.querySelectorAll(".theme-progress-item");
+
+  THEMES.forEach((theme,index)=>{
+
+    const pool=QUESTIONS.filter(q=>q.theme===theme.name);
+
+    const themeIds=new Set(pool.map(q=>q.id));
+
+    const themeUsedIds=new Set(
+      usedHistory.filter(id=>themeIds.has(id))
+    );
+
+    const themeTotal=pool.length;
+    const themeUsed=themeUsedIds.size;
+
+    const themePercentage=themeTotal
+      ? Math.min(100,Math.round((themeUsed/themeTotal)*100))
+      : 0;
+
+    const item=items[index];
+
+    if(!item)return;
+
+    item.querySelector(".theme-progress-count").textContent=
+      themeUsed.toLocaleString("fr-FR")+" / "+
+      themeTotal.toLocaleString("fr-FR");
+
+    item.querySelector(".theme-progress-fill").style.width=
+      themePercentage+"%";
+  });
 }
 
 /* =====================================================
@@ -1831,9 +1991,6 @@ async function importBank(file){
    BOUTONS ET INITIALISATION
 ===================================================== */
 
-// Actualisation automatique quand le thème change
-$("theme").addEventListener("change",updateProgress);
-
 $("newQuiz").addEventListener("click",()=>{
 
   stopPreview();
@@ -1893,4 +2050,3 @@ loadRemoteBank();
 </script>
 </body>
 </html>
-
