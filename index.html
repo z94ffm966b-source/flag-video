@@ -111,11 +111,20 @@ canvas{
   color:#d8c8ed;
   line-height:1.7;
 }
+.bank-buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:15px;
+}
+.bank-buttons button{width:100%}
+.file-input{display:none}
 @media(max-width:500px){
   body{padding:12px}
   .panel{padding:15px}
   .buttons{grid-template-columns:1fr}
   .buttons button:first-child{grid-column:auto}
+  .bank-buttons{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -194,6 +203,23 @@ canvas{
   </button>
 </section>
 
+<section class="panel">
+  <h2>📦 Banque de questions</h2>
+  <p class="small">
+    Exporte ta banque pour me l'envoyer dans cette conversation.
+    Je pourrai l'enrichir avec de nouvelles questions sans reprendre les anciennes.
+    Tu pourras ensuite importer la banque actualisée ici.
+  </p>
+  <div class="bank-buttons">
+    <button id="exportBank">⬇️ Exporter la banque JSON</button>
+    <button class="secondary" id="importBankBtn">📥 Importer une banque JSON</button>
+  </div>
+  <input class="file-input" type="file" id="importBankFile" accept=".json,application/json">
+  <div class="status" id="bankStatus">
+    Banque actuelle : 40 questions.
+  </div>
+</section>
+
 </div>
 
 <script>
@@ -201,10 +227,9 @@ canvas{
 
 /* =====================================================
    BANQUE DE QUESTIONS
-   Chaque question possède ses 4 réponses cohérentes.
 ===================================================== */
 
-const QUESTIONS = [
+let QUESTIONS = [
 
 /* GÉOGRAPHIE */
 {
@@ -519,12 +544,20 @@ const ctx=canvas.getContext("2d");
 
 let currentQuiz=[];
 let previewTimer=null;
-let usedHistory=JSON.parse(localStorage.getItem("quiz_history")||"[]");
+let usedHistory=[];
+
+try{
+  const savedHistory=JSON.parse(localStorage.getItem("quiz_history")||"[]");
+  if(Array.isArray(savedHistory))usedHistory=savedHistory;
+}catch(e){
+  usedHistory=[];
+}
+
 let imageCache={};
 
 const voices={
-female:"ff_siwis",
-male:"ff_alex"
+  female:"ff_siwis",
+  male:"ff_alex"
 };
 
 function shuffle(array){
@@ -553,12 +586,21 @@ function escapeHTML(str){
 }
 
 /* =====================================================
-   VALIDATION ET SÉLECTION DES QUESTIONS
+   VALIDATION ET SAUVEGARDE DE LA BANQUE
 ===================================================== */
 
 function validateQuestion(q){
+  if(!q||typeof q!=="object")throw new Error("Question invalide.");
+  if(typeof q.id!=="string"||!q.id.trim())throw new Error("Identifiant de question manquant.");
+  if(typeof q.theme!=="string"||!q.theme.trim())throw new Error("Thème manquant : "+q.id);
+  if(!["FACILE","MOYEN","DIFFICILE"].includes(q.level))throw new Error("Difficulté invalide : "+q.id);
+  if(typeof q.question!=="string"||!q.question.trim())throw new Error("Texte de question manquant : "+q.id);
+  if(typeof q.answer!=="string"||!q.answer.trim())throw new Error("Réponse manquante : "+q.id);
   if(!Array.isArray(q.options)||q.options.length!==4){
     throw new Error("Une question ne possède pas exactement 4 propositions : "+q.id);
+  }
+  if(!q.options.every(o=>typeof o==="string"&&o.trim())){
+    throw new Error("Une proposition est invalide : "+q.id);
   }
   if(!q.options.includes(q.answer)){
     throw new Error("La bonne réponse manque dans les propositions : "+q.id);
@@ -566,14 +608,55 @@ function validateQuestion(q){
   if(new Set(q.options).size!==4){
     throw new Error("Une question contient des propositions en double : "+q.id);
   }
+  if(typeof q.image!=="string")throw new Error("Image manquante : "+q.id);
+  if(typeof q.emoji!=="string")throw new Error("Emoji manquant : "+q.id);
   return true;
 }
+
+function validateBank(bank){
+  if(!Array.isArray(bank)||bank.length<5){
+    throw new Error("La banque doit contenir au moins 5 questions.");
+  }
+
+  const ids=new Set();
+
+  bank.forEach(q=>{
+    validateQuestion(q);
+    if(ids.has(q.id)){
+      throw new Error("Identifiant en double : "+q.id);
+    }
+    ids.add(q.id);
+  });
+
+  return true;
+}
+
+function loadSavedBank(){
+  try{
+    const saved=localStorage.getItem("quiz_question_bank");
+    if(!saved)return;
+
+    const data=JSON.parse(saved);
+    const bank=Array.isArray(data)?data:data.questions;
+
+    validateBank(bank);
+    QUESTIONS=bank;
+  }catch(error){
+    console.warn("Banque sauvegardée non chargée :",error);
+  }
+}
+
+loadSavedBank();
+
+/* =====================================================
+   SÉLECTION DES QUESTIONS
+===================================================== */
 
 function chooseQuiz(){
   const theme=$("theme").value;
   const difficulty=$("difficulty").value;
 
-  let pool=QUESTIONS.filter(q=>
+  const pool=QUESTIONS.filter(q=>
     (theme==="TOUS"||q.theme===theme)&&
     (difficulty==="TOUS"||q.level===difficulty)
   );
@@ -584,13 +667,18 @@ function chooseQuiz(){
   }
 
   const unused=pool.filter(q=>!usedHistory.includes(q.id));
-  if(unused.length>=5){
-    pool=unused;
-  }else{
-    pool=shuffle(pool);
-  }
+  const alreadyUsed=pool.filter(q=>usedHistory.includes(q.id));
 
-  const selected=shuffle(pool).slice(0,5);
+  let selected;
+
+  if(unused.length>=5){
+    selected=shuffle(unused).slice(0,5);
+  }else{
+    selected=[
+      ...shuffle(unused),
+      ...shuffle(alreadyUsed)
+    ].slice(0,5);
+  }
 
   selected.forEach(validateQuestion);
 
@@ -809,26 +897,20 @@ async function loadImages(quiz){
 }
 
 /* =====================================================
-   SYNTHÈSE VOCALE TTS.AI
+   SYNTHÈSE VOCALE TTS.AI — KOKORO
 ===================================================== */
 
 async function getVoice(){
   const gender=$("voice").value;
-  const fallback=voices[gender];
 
-  try{
-    const response=await fetch(
-      "https://api.tts.ai/v1/voices/?language=fr&model=kokoro&gender="+gender
-    );
-    if(!response.ok)return fallback;
+  /*
+    Voix féminine fixée sur ff_siwis :
+    évite de sélectionner au hasard une voix française
+    qui pourrait avoir un accent différent.
+  */
+  if(gender==="female")return "ff_siwis";
 
-    const data=await response.json();
-    const list=Array.isArray(data)?data:(data.results||data.voices||[]);
-    const selected=list.find(v=>v.id||v.voice);
-    return selected?.id||selected?.voice||fallback;
-  }catch(e){
-    return fallback;
-  }
+  return voices.male;
 }
 
 async function speech(text,voice){
@@ -921,15 +1003,14 @@ async function prepareAudio(quiz,introText,voice){
       duration:THINK_SECONDS
     });
 
+    /*
+      La réponse reste affichée au moins 2 secondes.
+      Il n'y a plus de segment pause avec écran vide.
+    */
     segments.push({
       type:"answer",
       index:i,
       buffer:answerBuffer
-    });
-
-    segments.push({
-      type:"pause",
-      duration:REVEAL_SECONDS
     });
   }
 
@@ -975,6 +1056,9 @@ async function renderVideo(quiz,videoNumber=1){
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   const audioContext=new AudioContextClass();
   await audioContext.resume();
+
+  let canvasStream=null;
+  let audioDestination=null;
 
   try{
     const voice=await getVoice();
@@ -1035,6 +1119,7 @@ async function renderVideo(quiz,videoNumber=1){
 
       else if(segment.type==="answer"){
         const duration=Math.max(REVEAL_SECONDS,segment.audio.duration);
+
         timeline.push({
           type:"answer",
           index:segment.index,
@@ -1042,16 +1127,8 @@ async function renderVideo(quiz,videoNumber=1){
           end:cursor+duration,
           audio:segment.audio
         });
-        cursor+=duration;
-      }
 
-      else if(segment.type==="pause"){
-        timeline.push({
-          type:"pause",
-          start:cursor,
-          end:cursor+segment.duration
-        });
-        cursor+=segment.duration;
+        cursor+=duration;
       }
 
       else if(segment.type==="end"){
@@ -1065,10 +1142,14 @@ async function renderVideo(quiz,videoNumber=1){
       }
     }
 
-    const totalDuration=cursor+0.5;
+    /*
+      La vidéo s'arrête exactement à la fin du dernier segment.
+      Aucun délai supplémentaire de 0,5 seconde.
+    */
+    const totalDuration=cursor;
 
-    const canvasStream=canvas.captureStream(30);
-    const audioDestination=audioContext.createMediaStreamDestination();
+    canvasStream=canvas.captureStream(30);
+    audioDestination=audioContext.createMediaStreamDestination();
 
     const stream=new MediaStream([
       ...canvasStream.getVideoTracks(),
@@ -1083,8 +1164,6 @@ async function renderVideo(quiz,videoNumber=1){
         videoBitsPerSecond:5000000
       });
     }catch(error){
-      canvasStream.getTracks().forEach(t=>t.stop());
-      audioDestination.stream.getTracks().forEach(t=>t.stop());
       throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
     }
 
@@ -1115,6 +1194,11 @@ async function renderVideo(quiz,videoNumber=1){
       }
     }
 
+    /*
+      Prépare l'écran d'introduction pendant le court
+      démarrage technique de l'enregistrement.
+    */
+    drawIntro(introText);
     recorder.start(250);
 
     function drawFrame(){
@@ -1125,12 +1209,25 @@ async function renderVideo(quiz,videoNumber=1){
         return;
       }
 
+      /*
+        Avant le début de la timeline, on garde l'intro.
+        Les segments sont continus : pas d'écran vide
+        entre la réponse et la prochaine question.
+      */
+      if(elapsed<0){
+        drawIntro(introText);
+        requestAnimationFrame(drawFrame);
+        return;
+      }
+
       const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
 
       if(!segment){
-        background();
-        drawBrand();
-      }else if(segment.type==="intro"){
+        if(recorder.state!=="inactive")recorder.stop();
+        return;
+      }
+
+      if(segment.type==="intro"){
         drawIntro(introText);
       }else if(segment.type==="question"){
         const q=quiz[segment.index];
@@ -1144,9 +1241,6 @@ async function renderVideo(quiz,videoNumber=1){
         drawQuestion(q,segment.index,quiz.length,0,true);
       }else if(segment.type==="end"){
         drawEnd();
-      }else{
-        background();
-        drawBrand();
       }
 
       requestAnimationFrame(drawFrame);
@@ -1156,9 +1250,6 @@ async function renderVideo(quiz,videoNumber=1){
 
     const blob=await finished;
 
-    canvasStream.getTracks().forEach(t=>t.stop());
-    audioDestination.stream.getTracks().forEach(t=>t.stop());
-
     if(!blob.size){
       throw new Error("La vidéo MP4 générée est vide.");
     }
@@ -1166,6 +1257,8 @@ async function renderVideo(quiz,videoNumber=1){
     return blob;
 
   }finally{
+    if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());
+    if(audioDestination)audioDestination.stream.getTracks().forEach(t=>t.stop());
     await audioContext.close();
   }
 }
@@ -1316,6 +1409,95 @@ async function generateFive(){
 }
 
 /* =====================================================
+   EXPORTATION DE LA BANQUE JSON
+===================================================== */
+
+function exportBank(){
+  try{
+    validateBank(QUESTIONS);
+
+    const data={
+      app:"quizzzz123_",
+      version:1,
+      exportedAt:new Date().toISOString(),
+      questionCount:QUESTIONS.length,
+      questions:QUESTIONS
+    };
+
+    const blob=new Blob(
+      [JSON.stringify(data,null,2)],
+      {type:"application/json;charset=utf-8"}
+    );
+
+    const date=new Date().toISOString().slice(0,10);
+    downloadBlob(blob,"quizzzz123_banque_questions_"+date+".json");
+
+    $("bankStatus").textContent=
+      "Export réussi : "+QUESTIONS.length+" questions enregistrées.";
+  }catch(error){
+    $("bankStatus").textContent="Erreur d'export : "+error.message;
+  }
+}
+
+/* =====================================================
+   IMPORTATION D'UNE BANQUE JSON
+===================================================== */
+
+async function importBank(file){
+  if(!file)return;
+
+  try{
+    const text=await file.text();
+    const data=JSON.parse(text);
+    const bank=Array.isArray(data)?data:data.questions;
+
+    validateBank(bank);
+
+    const confirmed=confirm(
+      "Importer cette banque de "+bank.length+
+      " questions ? Elle remplacera la banque actuelle."
+    );
+
+    if(!confirmed)return;
+
+    QUESTIONS=bank.map(q=>({
+      id:q.id,
+      theme:q.theme,
+      level:q.level,
+      question:q.question,
+      answer:q.answer,
+      options:[...q.options],
+      image:q.image,
+      emoji:q.emoji
+    }));
+
+    localStorage.setItem(
+      "quiz_question_bank",
+      JSON.stringify({
+        version:1,
+        questions:QUESTIONS
+      })
+    );
+
+    currentQuiz=[];
+    imageCache={};
+
+    $("bankStatus").textContent=
+      "Import réussi : "+QUESTIONS.length+
+      " questions sauvegardées sur cet appareil.";
+
+    setStatus("Nouvelle banque de questions importée avec succès !");
+
+  }catch(error){
+    console.error(error);
+    $("bankStatus").textContent=
+      "Import impossible : "+error.message;
+  }finally{
+    $("importBankFile").value="";
+  }
+}
+
+/* =====================================================
    BOUTONS ET INITIALISATION
 ===================================================== */
 
@@ -1342,8 +1524,24 @@ $("clearHistory").addEventListener("click",()=>{
   }
 });
 
+$("exportBank").addEventListener("click",exportBank);
+
+$("importBankBtn").addEventListener("click",()=>{
+  $("importBankFile").click();
+});
+
+$("importBankFile").addEventListener("change",event=>{
+  const file=event.target.files?.[0];
+  importBank(file);
+});
+
 updateHistory();
+
+$("bankStatus").textContent=
+  "Banque actuelle : "+QUESTIONS.length+" questions.";
+
 drawIntro("Teste tes connaissances !");
 </script>
 </body>
 </html>
+
