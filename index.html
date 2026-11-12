@@ -4,366 +4,1518 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#090014">
-<title>quizzzz123_ — Créateur de quiz</title>
+<meta name="theme-color" content="#080014">
+<title>quizzzz123_ — Quiz TikTok</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:18px;background:radial-gradient(circle at top,#281044,#090014 60%);color:white;font-family:Arial,sans-serif}
-main{max-width:850px;margin:auto}
-header{text-align:center;padding:25px 10px}
-.logo{font-size:35px;font-weight:900}
-.logo span{color:#c084fc}
-header p{color:#b8a8ca}
-.panel{background:#190b2d;border:1px solid #59347a;border-radius:18px;padding:20px;margin:15px 0}
-h2{font-size:19px;margin:0 0 16px}
-label{display:block;color:#d8c7e8;font-size:13px;margin:12px 0 6px}
-select,button{width:100%;padding:14px;border-radius:11px;border:1px solid #63418a;background:#28143f;color:white;font-size:15px}
-button{background:linear-gradient(100deg,#9333ea,#c026d3);border:0;font-weight:bold;cursor:pointer;margin-top:12px}
-button:disabled{opacity:.5}
-.secondary{background:#302044;border:1px solid #65428b}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.info{background:#28143f;padding:13px;border-radius:12px;color:#d9c9e8;font-size:13px;line-height:1.6}
-#status{color:#d8b4fe;text-align:center;white-space:pre-wrap;font-size:14px;margin:15px 0}
-#progress{height:8px;background:#302044;border-radius:10px;overflow:hidden}
-#bar{height:100%;width:0;background:linear-gradient(90deg,#9333ea,#ec4899)}
-#preview{width:100%;max-width:270px;aspect-ratio:9/16;background:#10051d;border-radius:15px;display:block;margin:15px auto}
-.small{font-size:12px;color:#a994bd;line-height:1.5}
-@media(max-width:520px){.grid{grid-template-columns:1fr}}
+body{
+ margin:0;padding:16px;color:white;font-family:Arial,sans-serif;
+ background:radial-gradient(ellipse at 50% 0%,#542080,#160725 45%,#08000f);
+}
+main{max-width:760px;margin:auto}
+header{text-align:center;padding:18px 5px}
+h1{
+ font-size:38px;margin:0;
+ background:linear-gradient(90deg,#fff,#ff72d8,#a77aff);
+ -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+header p{color:#c9a9e6;letter-spacing:3px;font-size:11px}
+.panel{
+ background:linear-gradient(145deg,#211033,#12091f);
+ border:1px solid #59317b;border-radius:22px;
+ padding:19px;margin:16px 0;box-shadow:0 12px 35px #0006;
+}
+label{display:block;font-weight:bold;margin:15px 0 8px}
+select{
+ width:100%;padding:14px;border-radius:12px;
+ background:#10071c;color:white;border:1px solid #704795;font-size:15px
+}
+button{
+ width:100%;padding:16px;border:0;border-radius:13px;
+ background:linear-gradient(100deg,#873cff,#ed4fc6);
+ color:white;font-weight:bold;font-size:15px;margin-top:12px;
+ box-shadow:0 5px 18px #a33aff44;cursor:pointer;
+}
+button.secondary{background:#302044;border:1px solid #67408a;box-shadow:none}
+button.batch{background:linear-gradient(100deg,#d12c9b,#873cff)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.preview{
+ width:min(100%,330px);aspect-ratio:9/16;margin:18px auto;
+ border:2px solid #8d54bd;border-radius:18px;overflow:hidden;
+ box-shadow:0 0 35px #a044ff44;
+}
+canvas{width:100%;height:100%;display:block}
+.hint{font-size:13px;color:#c3add5;line-height:1.6}
+.status{font-size:13px;color:#e8caff;line-height:1.6;margin-top:14px;white-space:pre-wrap}
+.small{font-size:12px;color:#bda6d1;line-height:1.5}
 </style>
 </head>
+
 <body>
 <main>
 <header>
-<div class="logo">quizzzz<span>123_</span></div>
-<p>Le générateur de quiz pour TikTok</p>
+<h1>quizzzz123_</h1>
+<p>LE QUIZ QUI TESTE TA CULTURE</p>
 </header>
 
 <section class="panel">
-<h2>Créer une vidéo</h2>
-<label>Thème des questions</label>
+<label>Thème du quiz</label>
 <select id="theme">
-<option value="all">Tous les thèmes mélangés</option>
-<option>Géographie</option>
-<option>Histoire</option>
-<option>Sciences</option>
-<option>Sport</option>
-<option>Cinéma et séries</option>
-<option>Animaux</option>
-<option>Technologie</option>
-<option>Culture générale</option>
+ <option value="all">🌍 Tous les thèmes</option>
+ <option value="Géographie">🌍 Géographie</option>
+ <option value="Histoire">🏛️ Histoire</option>
+ <option value="Sciences">🔬 Sciences</option>
+ <option value="Sport">⚽ Sport</option>
+ <option value="Cinéma et séries">🎬 Cinéma et séries</option>
+ <option value="Animaux">🐾 Animaux</option>
+ <option value="Technologie">💻 Technologie</option>
+ <option value="Culture générale">🧠 Culture générale</option>
 </select>
+
+<label>Phrase d'introduction</label>
+<select id="intro">
+ <option>Seras-tu capable de répondre aux 5 questions ?</option>
+ <option>Arriveras-tu à faire un sans-faute ?</option>
+ <option>Seuls les vrais experts feront 5 sur 5 !</option>
+ <option>Teste ta culture générale en 5 questions !</option>
+ <option>Voyons si tu es vraiment incollable !</option>
+</select>
+
 <label>Difficulté</label>
 <select id="difficulty">
-<option value="mix">Mélange facile / moyen / difficile</option>
-<option>Facile</option>
-<option>Moyen</option>
-<option>Difficile</option>
+ <option value="mix">Mélange équilibré</option>
+ <option value="random">Totalement aléatoire</option>
+ <option value="hard">Plutôt difficile</option>
 </select>
-<div class="grid">
-<div class="info">⏱️ <b>4 secondes</b><br>Pour répondre</div>
-<div class="info">🎯 <b>5 questions</b><br>Par vidéo</div>
-</div>
-<button id="generate">Générer ma vidéo</button>
-<div id="status">Prêt à créer ton quiz.</div>
-<div id="progress"><div id="bar"></div></div>
-<video id="preview" controls playsinline></video>
-<a id="download" style="display:none;text-align:center;color:#d8b4fe;margin:12px" download="quizzzz123_video.webm">⬇ Télécharger la vidéo</a>
+
+<label>Voix française</label>
+<select id="voice">
+ <option value="female">Voix féminine</option>
+ <option value="male">Voix masculine</option>
+</select>
+
+<button id="newQuiz">🎲 Créer un nouveau quiz</button>
+<button id="previewBtn" class="secondary">▶ Aperçu animé</button>
+<button id="generate">🎬 Générer 1 vidéo</button>
+<button id="generateFive" class="batch">🚀 Générer 5 vidéos (ZIP)</button>
+
+<div class="status" id="status">Prêt à créer ton quiz !</div>
+<p class="small">Les images sont recherchées automatiquement selon le sujet de chaque question. Une connexion Internet est nécessaire.</p>
 </section>
 
 <section class="panel">
-<h2>Banque de questions</h2>
-<div class="info"><b id="total">40 questions de test</b><br>Les questions déjà utilisées sont conservées dans ton historique.</div>
-<button class="secondary" id="export">Exporter l'historique JSON</button>
-<button class="secondary" id="importBtn">Importer un historique JSON</button>
-<input type="file" id="importFile" accept=".json,application/json" hidden>
-<p class="small">Conserve ton fichier JSON pour éviter de retrouver les mêmes questions lors des prochaines mises à jour.</p>
+<h3 style="text-align:center">APERÇU TIKTOK</h3>
+<div class="preview">
+ <canvas id="screen" width="1080" height="1920"></canvas>
+</div>
+<p class="hint" style="text-align:center">
+Format vertical 9:16. Les réponses restent à gauche pour laisser de la place aux boutons TikTok à droite.
+</p>
 </section>
 </main>
 
 <script>
-const QUESTIONS=[
-["geo01","Géographie","Facile","Quelle est la capitale de l'Italie ?","Rome|Madrid|Athènes|Lisbonne",0,"Rome"],
-["geo02","Géographie","Moyen","Quel est le plus grand océan du monde ?","Atlantique|Indien|Pacifique|Arctique",2,"Océan Pacifique"],
-["geo03","Géographie","Difficile","Quel pays possède le plus de fuseaux horaires en comptant ses territoires ?","Russie|France|États-Unis|Chine",1,"France"],
-["geo04","Géographie","Moyen","Sur quel continent se trouve le désert du Namib ?","Asie|Afrique|Océanie|Amérique",1,"Désert du Namib"],
-["geo05","Géographie","Difficile","Quelle est la capitale du Kazakhstan ?","Almaty|Bichkek|Astana|Tachkent",2,"Astana"],
+/* =====================================================
+   CONFIGURATION
+===================================================== */
 
-["his01","Histoire","Facile","En quelle année débute la Révolution française ?","1789|1799|1815|1776",0,"Révolution française"],
-["his02","Histoire","Moyen","Qui était le premier empereur romain ?","Jules César|Auguste|Néron|Trajan",1,"Auguste empereur romain"],
-["his03","Histoire","Difficile","En quelle année tombe le mur de Berlin ?","1987|1989|1991|1993",1,"Chute du mur de Berlin"],
-["his04","Histoire","Moyen","Quel roi était surnommé le Roi-Soleil ?","Louis XIII|Louis XIV|Louis XV|François Ier",1,"Louis XIV"],
-["his05","Histoire","Difficile","Quelle civilisation a construit le Machu Picchu ?","Maya|Aztèque|Inca|Olmèque",2,"Machu Picchu"],
+const ANSWER_SECONDS=4;
+const REVEAL_SECONDS=2;
+const QUESTION_COUNT=5;
 
-["sci01","Sciences","Facile","Quelle planète est surnommée la planète rouge ?","Vénus|Mars|Jupiter|Mercure",1,"Mars planète"],
-["sci02","Sciences","Moyen","Quel gaz les plantes absorbent-elles pour la photosynthèse ?","Oxygène|Azote|Dioxyde de carbone|Hydrogène",2,"Photosynthèse"],
-["sci03","Sciences","Difficile","Quel est le symbole chimique du potassium ?","P|Pt|K|Po",2,"Potassium élément chimique"],
-["sci04","Sciences","Moyen","Combien d'os possède généralement un adulte ?","186|206|226|246",1,"Squelette humain"],
-["sci05","Sciences","Difficile","Quelle particule porte une charge électrique négative ?","Proton|Neutron|Électron|Photon",2,"Électron atome"],
-
-["spo01","Sport","Facile","Combien de joueurs une équipe de football aligne-t-elle sur le terrain ?","9|10|11|12",2,"Football match"],
-["spo02","Sport","Moyen","Dans quel sport utilise-t-on un volant ?","Tennis|Badminton|Squash|Tennis de table",1,"Badminton"],
-["spo03","Sport","Difficile","Combien de kilomètres mesure officiellement un marathon ?","40 km|41,195 km|42,195 km|43 km",2,"Marathon course"],
-["spo04","Sport","Moyen","Quel pays a remporté la Coupe du monde de football 2018 ?","Brésil|Allemagne|France|Argentine",2,"Coupe du monde football 2018 France"],
-["spo05","Sport","Difficile","Dans quel sport le tournoi des Six Nations est-il disputé ?","Rugby à XV|Cricket|Hockey|Handball",0,"Tournoi des Six Nations rugby"],
-
-["cin01","Cinéma et séries","Facile","Comment s'appelle le royaume dans lequel vit Elsa dans La Reine des neiges ?","Narnia|Arendelle|Poudlard|Fantasia",1,"La Reine des neiges Arendelle"],
-["cin02","Cinéma et séries","Moyen","Quel acteur incarne Jack dans le film Titanic de 1997 ?","Brad Pitt|Tom Cruise|Leonardo DiCaprio|Matt Damon",2,"Titanic film 1997"],
-["cin03","Cinéma et séries","Difficile","Quel est le nom de famille de Walter dans Breaking Bad ?","Goodman|White|Pinkman|Schrader",1,"Breaking Bad Walter White"],
-["cin04","Cinéma et séries","Moyen","Dans Harry Potter, quelle maison est associée au lion ?","Serpentard|Serdaigle|Poufsouffle|Gryffondor",3,"Harry Potter Gryffondor"],
-["cin05","Cinéma et séries","Difficile","Quel réalisateur a réalisé le film Inception ?","Steven Spielberg|Christopher Nolan|James Cameron|Ridley Scott",1,"Inception film"],
-
-["ani01","Animaux","Facile","Quel est le plus grand animal terrestre ?","Rhinocéros|Girafe|Éléphant d'Afrique|Hippopotame",2,"Éléphant d'Afrique"],
-["ani02","Animaux","Moyen","Combien de cœurs possède une pieuvre ?","Un|Deux|Trois|Quatre",2,"Pieuvre"],
-["ani03","Animaux","Difficile","Quel est le seul mammifère capable de voler réellement ?","Écureuil volant|Chauve-souris|Lémurien volant|Colugo",1,"Chauve-souris"],
-["ani04","Animaux","Moyen","Comment appelle-t-on le petit de la grenouille ?","Têtard|Alevin|Larve de papillon|Nymphe",0,"Têtard grenouille"],
-["ani05","Animaux","Difficile","Quel animal peut projeter sa langue pour attraper ses proies ?","Girafe|Caméléon|Fourmilier|Pangolin",1,"Caméléon"],
-
-["tec01","Technologie","Facile","Que signifie l'abréviation USB ?","Universal Serial Bus|United System Board|User Software Base|Universal System Battery",0,"USB connecteur"],
-["tec02","Technologie","Moyen","Quel composant est souvent considéré comme le cerveau d'un ordinateur ?","RAM|Processeur|Disque dur|Carte son",1,"Processeur ordinateur"],
-["tec03","Technologie","Difficile","En quelle année le premier iPhone a-t-il été présenté ?","2005|2006|2007|2008",2,"Premier iPhone 2007"],
-["tec04","Technologie","Moyen","Que désigne le Wi-Fi ?","Une technologie de réseau sans fil|Un câble internet|Un type de batterie|Un système de stockage",0,"Wi-Fi routeur"],
-["tec05","Technologie","Difficile","Quel langage est principalement utilisé pour structurer une page web ?","Python|HTML|SQL|C++",1,"HTML code"],
-
-["cul01","Culture générale","Facile","Combien de côtés possède un hexagone ?","5|6|7|8",1,"Hexagone géométrie"],
-["cul02","Culture générale","Moyen","Quelle monnaie utilise le Japon ?","Yuan|Won|Yen|Dollar",2,"Yen japonais monnaie"],
-["cul03","Culture générale","Difficile","Quel peintre a réalisé La Nuit étoilée ?","Claude Monet|Vincent van Gogh|Pablo Picasso|Salvador Dalí",1,"La Nuit étoilée Van Gogh"],
-["cul04","Culture générale","Moyen","Combien de langues officielles compte l'Organisation des Nations unies ?","4|5|6|7",2,"Organisation des Nations unies"],
-["cul05","Culture générale","Difficile","Quel est le nom de la science qui étudie les champignons ?","Botanique|Mycologie|Géologie|Écologie",1,"Mycologie champignons"]
-].map(x=>({id:x[0],theme:x[1],level:x[2],q:x[3],a:x[4].split("|"),correct:x[5],img:x[6]}));
-
-const KEY="quizzzz_history",IMAGE_KEY="quizzzz_images";
 const $=id=>document.getElementById(id);
-let busy=false;
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function history(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return []}}
-function status(t){$("status").textContent=t}
-function progress(n){$("bar").style.width=n+"%"}
+const canvas=$("screen");
+const ctx=canvas.getContext("2d");
 
-function chooseQuestions(){
- let used=new Set(history().map(x=>x.id));
- let pool=QUESTIONS.filter(q=>!used.has(q.id));
- if($("theme").value!=="all")pool=pool.filter(q=>q.theme===$("theme").value);
- if($("difficulty").value!=="mix")pool=pool.filter(q=>q.level===$("difficulty").value);
- if($("difficulty").value==="mix"){
-  let groups=["Facile","Moyen","Difficile"].map(level=>pool.filter(q=>q.level===level));
-  pool=[];
-  while(pool.length<5&&groups.some(g=>g.length)){
-   groups.forEach(g=>{if(g.length&&pool.length<5)pool.push(g.splice(Math.floor(Math.random()*g.length),1)[0])});
+let quiz=[];
+let images={};
+let animation=null;
+let busy=false;
+let timeline=[];
+let audioEvents=[];
+let totalDuration=0;
+
+/* =====================================================
+   BANQUE DE 40 QUESTIONS
+   8 thèmes - 5 questions par thème
+===================================================== */
+
+const questions=[
+
+/* GEOGRAPHIE */
+{
+ id:"geo01",theme:"Géographie",level:"FACILE",
+ question:"Quelle est la capitale de l'Australie ?",
+ answer:"Canberra",
+ options:["Sydney","Canberra","Melbourne","Perth"],
+ image:"Canberra Australia city parliament",
+ emoji:"🌏"
+},
+{
+ id:"geo02",theme:"Géographie",level:"MOYEN",
+ question:"Quel est le plus grand océan du monde ?",
+ answer:"L'océan Pacifique",
+ options:["Océan Atlantique","Océan Indien","Océan Pacifique","Océan Arctique"],
+ image:"Pacific Ocean aerial ocean",
+ emoji:"🌊"
+},
+{
+ id:"geo03",theme:"Géographie",level:"FACILE",
+ question:"Dans quel pays se trouve la ville de Kyoto ?",
+ answer:"Au Japon",
+ options:["En Chine","Au Japon","En Corée du Sud","En Thaïlande"],
+ image:"Kyoto Japan traditional city",
+ emoji:"⛩️"
+},
+{
+ id:"geo04",theme:"Géographie",level:"DIFFICILE",
+ question:"Quel pays possède le plus grand nombre d'habitants ?",
+ answer:"L'Inde",
+ options:["La Chine","Les États-Unis","L'Inde","L'Indonésie"],
+ image:"India Mumbai aerial city",
+ emoji:"🌍"
+},
+{
+ id:"geo05",theme:"Géographie",level:"MOYEN",
+ question:"Quel fleuve traverse Budapest ?",
+ answer:"Le Danube",
+ options:["Le Rhin","Le Danube","La Seine","Le Tage"],
+ image:"Danube river Budapest Hungary",
+ emoji:"🏞️"
+},
+
+/* HISTOIRE */
+{
+ id:"hist01",theme:"Histoire",level:"FACILE",
+ question:"En quelle année a commencé la Révolution française ?",
+ answer:"1789",
+ options:["1492","1789","1815","1914"],
+ image:"French Revolution Bastille painting",
+ emoji:"🏰"
+},
+{
+ id:"hist02",theme:"Histoire",level:"MOYEN",
+ question:"Qui était le premier empereur romain ?",
+ answer:"Auguste",
+ options:["Jules César","Néron","Auguste","Trajan"],
+ image:"Augustus Roman emperor statue",
+ emoji:"🏛️"
+},
+{
+ id:"hist03",theme:"Histoire",level:"FACILE",
+ question:"Quel mur est tombé en 1989 ?",
+ answer:"Le mur de Berlin",
+ options:["Le mur de Chine","Le mur de Berlin","Le mur d'Hadrien","Le mur de l'Atlantique"],
+ image:"Berlin Wall fall 1989",
+ emoji:"🧱"
+},
+{
+ id:"hist04",theme:"Histoire",level:"DIFFICILE",
+ question:"Quel traité met fin à la Première Guerre mondiale ?",
+ answer:"Le traité de Versailles",
+ options:["Le traité de Rome","Le traité de Versailles","Le traité de Paris","Le traité de Vienne"],
+ image:"Treaty of Versailles 1919 signing",
+ emoji:"📜"
+},
+{
+ id:"hist05",theme:"Histoire",level:"MOYEN",
+ question:"Quelle civilisation a construit Machu Picchu ?",
+ answer:"Les Incas",
+ options:["Les Mayas","Les Aztèques","Les Incas","Les Égyptiens"],
+ image:"Machu Picchu Inca ruins Peru",
+ emoji:"⛰️"
+},
+
+/* SCIENCES */
+{
+ id:"sci01",theme:"Sciences",level:"FACILE",
+ question:"Quelle planète est surnommée la planète rouge ?",
+ answer:"Mars",
+ options:["Vénus","Mars","Jupiter","Mercure"],
+ image:"Mars planet NASA surface",
+ emoji:"🪐"
+},
+{
+ id:"sci02",theme:"Sciences",level:"MOYEN",
+ question:"Quel gaz les plantes absorbent-elles principalement ?",
+ answer:"Le dioxyde de carbone",
+ options:["L'oxygène","L'hélium","Le dioxyde de carbone","L'azote"],
+ image:"Green plant leaves sunlight",
+ emoji:"🌱"
+},
+{
+ id:"sci03",theme:"Sciences",level:"FACILE",
+ question:"Combien de pattes possède une araignée ?",
+ answer:"Huit",
+ options:["Six","Huit","Dix","Douze"],
+ image:"Spider close up eight legs",
+ emoji:"🕷️"
+},
+{
+ id:"sci04",theme:"Sciences",level:"DIFFICILE",
+ question:"Quel est le symbole chimique de l'or ?",
+ answer:"Au",
+ options:["Ag","Or","Au","Fe"],
+ image:"Gold nuggets metal",
+ emoji:"🧪"
+},
+{
+ id:"sci05",theme:"Sciences",level:"MOYEN",
+ question:"Quelle est la vitesse approximative de la lumière dans le vide ?",
+ answer:"300 000 km/s",
+ options:["30 000 km/s","150 000 km/s","300 000 km/s","1 million km/s"],
+ image:"Light beam prism rainbow physics",
+ emoji:"💡"
+},
+
+/* SPORT */
+{
+ id:"sport01",theme:"Sport",level:"FACILE",
+ question:"Combien de joueurs une équipe de football a-t-elle sur le terrain ?",
+ answer:"Onze",
+ options:["Neuf","Dix","Onze","Douze"],
+ image:"Football soccer stadium players",
+ emoji:"⚽"
+},
+{
+ id:"sport02",theme:"Sport",level:"MOYEN",
+ question:"Dans quel sport utilise-t-on un volant ?",
+ answer:"Le badminton",
+ options:["Le tennis","Le badminton","Le squash","Le volley-ball"],
+ image:"Badminton shuttlecock racket",
+ emoji:"🏸"
+},
+{
+ id:"sport03",theme:"Sport",level:"FACILE",
+ question:"Combien d'anneaux figurent sur le symbole olympique ?",
+ answer:"Cinq",
+ options:["Quatre","Cinq","Six","Sept"],
+ image:"Olympic rings symbol",
+ emoji:"🏅"
+},
+{
+ id:"sport04",theme:"Sport",level:"DIFFICILE",
+ question:"Quel pays a remporté la Coupe du monde de football 2010 ?",
+ answer:"L'Espagne",
+ options:["L'Allemagne","Le Brésil","L'Espagne","Les Pays-Bas"],
+ image:"Spain 2010 football world cup celebration",
+ emoji:"🏆"
+},
+{
+ id:"sport05",theme:"Sport",level:"MOYEN",
+ question:"Dans quel sport peut-on réaliser un slam dunk ?",
+ answer:"Le basketball",
+ options:["Le handball","Le basketball","Le rugby","Le volleyball"],
+ image:"Basketball slam dunk hoop",
+ emoji:"🏀"
+},
+
+/* CINEMA ET SERIES */
+{
+ id:"cine01",theme:"Cinéma et séries",level:"FACILE",
+ question:"Comment s'appelle le royaume dans La Reine des neiges ?",
+ answer:"Arendelle",
+ options:["Narnia","Arendelle","Poudlard","Wakanda"],
+ image:"Frozen Arendelle castle snowy",
+ emoji:"🎬"
+},
+{
+ id:"cine02",theme:"Cinéma et séries",level:"MOYEN",
+ question:"Quel est le prénom du héros de Breaking Bad ?",
+ answer:"Walter",
+ options:["Jesse","Walter","Saul","Hank"],
+ image:"Breaking Bad desert RV television series",
+ emoji:"📺"
+},
+{
+ id:"cine03",theme:"Cinéma et séries",level:"FACILE",
+ question:"Quel animal est Simba dans Le Roi Lion ?",
+ answer:"Un lion",
+ options:["Un tigre","Un lion","Un léopard","Un guépard"],
+ image:"Lion cub savannah",
+ emoji:"🦁"
+},
+{
+ id:"cine04",theme:"Cinéma et séries",level:"DIFFICILE",
+ question:"Quel réalisateur a réalisé le film Inception ?",
+ answer:"Christopher Nolan",
+ options:["Steven Spielberg","James Cameron","Christopher Nolan","Ridley Scott"],
+ image:"Inception movie city folding dream",
+ emoji:"🎥"
+},
+{
+ id:"cine05",theme:"Cinéma et séries",level:"MOYEN",
+ question:"Dans Harry Potter, quelle maison a un lion pour emblème ?",
+ answer:"Gryffondor",
+ options:["Serpentard","Serdaigle","Poufsouffle","Gryffondor"],
+ image:"Harry Potter Gryffindor lion crest",
+ emoji:"🪄"
+},
+
+/* ANIMAUX */
+{
+ id:"anim01",theme:"Animaux",level:"FACILE",
+ question:"Quel est le plus grand animal terrestre ?",
+ answer:"L'éléphant d'Afrique",
+ options:["Le rhinocéros","La girafe","L'éléphant d'Afrique","L'hippopotame"],
+ image:"African elephant wildlife",
+ emoji:"🐘"
+},
+{
+ id:"anim02",theme:"Animaux",level:"MOYEN",
+ question:"Quel mammifère peut réellement voler ?",
+ answer:"La chauve-souris",
+ options:["L'écureuil volant","La chauve-souris","Le lémurien","Le colugo"],
+ image:"Bat flying wildlife",
+ emoji:"🦇"
+},
+{
+ id:"anim03",theme:"Animaux",level:"FACILE",
+ question:"Quel animal est connu pour changer de couleur ?",
+ answer:"Le caméléon",
+ options:["Le lézard vert","Le caméléon","L'iguane","Le gecko"],
+ image:"Chameleon colorful close up",
+ emoji:"🦎"
+},
+{
+ id:"anim04",theme:"Animaux",level:"DIFFICILE",
+ question:"Quel est le plus grand animal vivant sur Terre ?",
+ answer:"La baleine bleue",
+ options:["Le requin-baleine","L'éléphant","La baleine bleue","Le cachalot"],
+ image:"Blue whale underwater ocean",
+ emoji:"🐋"
+},
+{
+ id:"anim05",theme:"Animaux",level:"MOYEN",
+ question:"Combien de cœurs possède une pieuvre ?",
+ answer:"Trois",
+ options:["Un","Deux","Trois","Quatre"],
+ image:"Octopus underwater close up",
+ emoji:"🐙"
+},
+
+/* TECHNOLOGIE */
+{
+ id:"tech01",theme:"Technologie",level:"FACILE",
+ question:"Que signifie l'abréviation USB ?",
+ answer:"Universal Serial Bus",
+ options:["United System Board","Universal Serial Bus","User System Base","Universal Storage Box"],
+ image:"USB flash drive computer port",
+ emoji:"💻"
+},
+{
+ id:"tech02",theme:"Technologie",level:"MOYEN",
+ question:"Quelle entreprise a créé l'iPhone ?",
+ answer:"Apple",
+ options:["Samsung","Microsoft","Apple","Google"],
+ image:"Apple iPhone smartphone",
+ emoji:"📱"
+},
+{
+ id:"tech03",theme:"Technologie",level:"FACILE",
+ question:"Que signifie le sigle Wi-Fi ?",
+ answer:"Ce n'est pas une abréviation officielle",
+ options:["Wireless Fidelity","Wide Finder","Ce n'est pas une abréviation officielle","Wireless File"],
+ image:"WiFi router wireless network",
+ emoji:"📡"
+},
+{
+ id:"tech04",theme:"Technologie",level:"DIFFICILE",
+ question:"Quel langage est principalement utilisé pour structurer une page web ?",
+ answer:"HTML",
+ options:["Python","HTML","SQL","C++"],
+ image:"HTML code computer screen",
+ emoji:"🖥️"
+},
+{
+ id:"tech05",theme:"Technologie",level:"MOYEN",
+ question:"Que mesure la capacité d'un processeur exprimée en GHz ?",
+ answer:"Sa fréquence",
+ options:["Sa mémoire","Sa fréquence","Son poids","Sa température"],
+ image:"Computer CPU processor chip",
+ emoji:"⚙️"
+},
+
+/* CULTURE GENERALE */
+{
+ id:"cult01",theme:"Culture générale",level:"FACILE",
+ question:"Combien de côtés possède un hexagone ?",
+ answer:"Six",
+ options:["Cinq","Six","Sept","Huit"],
+ image:"Hexagon geometric shape",
+ emoji:"🔷"
+},
+{
+ id:"cult02",theme:"Culture générale",level:"MOYEN",
+ question:"Quelle langue possède le plus de locuteurs natifs ?",
+ answer:"Le chinois mandarin",
+ options:["L'anglais","L'espagnol","Le chinois mandarin","L'hindi"],
+ image:"Chinese calligraphy writing",
+ emoji:"🌐"
+},
+{
+ id:"cult03",theme:"Culture générale",level:"FACILE",
+ question:"Combien de minutes y a-t-il dans deux heures ?",
+ answer:"120",
+ options:["100","110","120","140"],
+ image:"Clock watch face",
+ emoji:"⏰"
+},
+{
+ id:"cult04",theme:"Culture générale",level:"DIFFICILE",
+ question:"Quel artiste a peint La Nuit étoilée ?",
+ answer:"Vincent van Gogh",
+ options:["Claude Monet","Pablo Picasso","Vincent van Gogh","Salvador Dalí"],
+ image:"Vincent van Gogh Starry Night painting",
+ emoji:"🎨"
+},
+{
+ id:"cult05",theme:"Culture générale",level:"MOYEN",
+ question:"Quel est le nombre de dents habituel chez un adulte ?",
+ answer:"32",
+ options:["28","30","32","36"],
+ image:"Human teeth dental anatomy",
+ emoji:"🦷"
+}
+];
+
+/* =====================================================
+   OUTILS GENERAUX
+===================================================== */
+
+function shuffle(array){
+ let a=[...array];
+ for(let i=a.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function wait(ms){
+ return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+function status(message){
+ $("status").textContent=message;
+}
+
+function getHistory(){
+ try{
+  return JSON.parse(localStorage.getItem("quizzzz_history")||"[]");
+ }catch(e){
+  return [];
+ }
+}
+
+function saveHistory(ids){
+ try{
+  let history=getHistory();
+  history.unshift({
+   date:new Date().toISOString(),
+   ids:ids
+  });
+  history=history.slice(0,500);
+  localStorage.setItem("quizzzz_history",JSON.stringify(history));
+ }catch(e){}
+}
+
+function getUsedIds(){
+ const history=getHistory();
+ return new Set(history.flatMap(entry=>{
+  if(Array.isArray(entry))return entry;
+  return entry.ids||[];
+ }));
+}
+
+/* =====================================================
+   CREATION DU QUIZ
+===================================================== */
+
+function chooseQuiz(){
+ const theme=$("theme").value;
+ const difficulty=$("difficulty").value;
+
+ let pool=questions.filter(q=>
+  theme==="all"||q.theme===theme
+ );
+
+ if(difficulty==="hard"){
+  pool=pool.filter(q=>q.level==="DIFFICILE"||q.level==="MOYEN");
+ }
+
+ if(pool.length<QUESTION_COUNT){
+  throw Error("Pas assez de questions disponibles dans ce thème.");
+ }
+
+ const history=getHistory();
+ const recentIds=new Set(
+  history.slice(0,5).flatMap(entry=>
+   Array.isArray(entry)?entry:(entry.ids||[])
+  )
+ );
+
+ let fresh=pool.filter(q=>!recentIds.has(q.id));
+
+ // Si toutes les questions du thème ont déjà été utilisées,
+ // on évite seulement les plus récentes.
+ if(fresh.length<QUESTION_COUNT){
+  fresh=pool.filter(q=>{
+   const lastTen=history.slice(0,10).flatMap(entry=>
+    Array.isArray(entry)?entry:(entry.ids||[])
+   );
+   return !lastTen.includes(q.id);
+  });
+ }
+
+ if(fresh.length<QUESTION_COUNT)fresh=pool;
+
+ let selected;
+
+ if(difficulty==="mix"){
+  const easy=shuffle(fresh.filter(q=>q.level==="FACILE"));
+  const medium=shuffle(fresh.filter(q=>q.level==="MOYEN"));
+  const hard=shuffle(fresh.filter(q=>q.level==="DIFFICILE"));
+
+  selected=shuffle([
+   easy[0],medium[0],hard[0],
+   ...shuffle(fresh).slice(0,2)
+  ].filter(Boolean));
+
+  selected=selected.slice(0,QUESTION_COUNT);
+
+  if(selected.length<QUESTION_COUNT){
+   const remaining=shuffle(fresh.filter(q=>
+    !selected.some(s=>s.id===q.id)
+   ));
+   selected.push(...remaining.slice(0,QUESTION_COUNT-selected.length));
+  }
+ }else{
+  selected=shuffle(fresh).slice(0,QUESTION_COUNT);
+ }
+
+ quiz=selected.map(q=>{
+  const wrong=shuffle(
+   questions.filter(other=>other.id!==q.id)
+  ).slice(0,3).map(other=>other.answer);
+
+  return {
+   ...q,
+   options:shuffle([q.answer,...wrong])
+  };
+ });
+
+ saveHistory(quiz.map(q=>q.id));
+ images={};
+}
+
+/* =====================================================
+   CHARGEMENT DES IMAGES
+===================================================== */
+
+async function loadQuestionImage(q){
+ if(images[q.id])return images[q.id];
+
+ try{
+  const search=encodeURIComponent(q.image);
+  const url=
+   "https://commons.wikimedia.org/w/api.php"+
+   "?action=query&generator=search"+
+   "&gsrsearch="+search+
+   "&gsrnamespace=6&gsrlimit=5"+
+   "&prop=imageinfo&iiprop=url"+
+   "&iiurlwidth=1000&format=json&origin=*";
+
+  const response=await fetch(url);
+  if(!response.ok)throw Error("Recherche image impossible");
+
+  const data=await response.json();
+  const pages=Object.values(data.query?.pages||{});
+
+  let imageUrl=null;
+
+  for(const page of pages){
+   const info=page.imageinfo?.[0];
+   if(info?.thumburl){
+    imageUrl=info.thumburl;
+    break;
+   }
+  }
+
+  if(!imageUrl)throw Error("Aucune image trouvée");
+
+  const img=new Image();
+  img.crossOrigin="anonymous";
+
+  await new Promise((resolve,reject)=>{
+   img.onload=resolve;
+   img.onerror=reject;
+   img.src=imageUrl;
+  });
+
+  images[q.id]=img;
+  return img;
+
+ }catch(error){
+  console.warn("Image indisponible pour",q.question,error);
+  images[q.id]=null;
+  return null;
+ }
+}
+
+async function loadImages(){
+ for(let i=0;i<quiz.length;i++){
+  status("Recherche des images : "+(i+1)+"/5...");
+  await loadQuestionImage(quiz[i]);
+ }
+}
+
+/* =====================================================
+   DESSIN CANVAS
+===================================================== */
+
+function roundedPath(x,y,w,h,r){
+ ctx.beginPath();
+ ctx.moveTo(x+r,y);
+ ctx.lineTo(x+w-r,y);
+ ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+ ctx.lineTo(x+w,y+h-r);
+ ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+ ctx.lineTo(x+r,y+h);
+ ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+ ctx.lineTo(x,y+r);
+ ctx.quadraticCurveTo(x,y,x+r,y);
+ ctx.closePath();
+}
+
+function roundRect(x,y,w,h,r,color,stroke){
+ roundedPath(x,y,w,h,r);
+ ctx.fillStyle=color;
+ ctx.fill();
+
+ if(stroke){
+  ctx.strokeStyle=stroke;
+  ctx.lineWidth=3;
+  ctx.stroke();
+ }
+}
+
+function background(){
+ const g=ctx.createLinearGradient(0,0,1080,1920);
+ g.addColorStop(0,"#351052");
+ g.addColorStop(.5,"#170725");
+ g.addColorStop(1,"#080014");
+
+ ctx.fillStyle=g;
+ ctx.fillRect(0,0,1080,1920);
+
+ const glow=ctx.createRadialGradient(300,300,20,300,300,650);
+ glow.addColorStop(0,"#a43cff55");
+ glow.addColorStop(1,"#a43cff00");
+
+ ctx.fillStyle=glow;
+ ctx.fillRect(0,0,1080,1100);
+
+ ctx.fillStyle="#ffffff09";
+ for(let i=0;i<35;i++){
+  const x=(i*173)%1080;
+  const y=(i*293)%1920;
+  ctx.beginPath();
+  ctx.arc(x,y,3,0,Math.PI*2);
+  ctx.fill();
+ }
+}
+
+function text(value,x,y,size,color,weight="bold"){
+ ctx.textAlign="center";
+ ctx.textBaseline="middle";
+ ctx.font=weight+" "+size+"px Arial";
+ ctx.fillStyle=color;
+ ctx.fillText(value,x,y);
+}
+
+function drawHeader(){
+ text("quizzzz123_",440,145,64,"#ff8bdf");
+ roundRect(145,220,590,5,3,"#ffffff22");
+}
+
+function drawImage(q,x,y,w,h){
+ const img=images[q.id];
+
+ ctx.save();
+ ctx.shadowColor="#000000";
+ ctx.shadowBlur=25;
+ roundRect(x-8,y-8,w+16,h+16,25,"#ffffff");
+ ctx.restore();
+
+ ctx.save();
+ roundedPath(x,y,w,h,18);
+ ctx.clip();
+
+ if(img){
+  const scale=Math.max(w/img.width,h/img.height);
+  const iw=img.width*scale;
+  const ih=img.height*scale;
+  ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih);
+ }else{
+  const g=ctx.createLinearGradient(x,y,x+w,y+h);
+  g.addColorStop(0,"#65319a");
+  g.addColorStop(1,"#1b1030");
+  ctx.fillStyle=g;
+  ctx.fillRect(x,y,w,h);
+  text(q.emoji||"❓",x+w/2,y+h/2,100,"white");
+ }
+
+ ctx.restore();
+}
+
+function drawIntro(){
+ background();
+ drawHeader();
+
+ text("🧠",440,590,125,"white");
+ text("PRÊT À JOUER ?",440,790,65,"white");
+ text($("intro").value,440,930,34,"#edcaff");
+
+ roundRect(145,1080,590,100,28,"#32164e","#a34cff");
+ text("5 QUESTIONS • 5 DÉFIS",440,1130,30,"#ff8bdf");
+ text("À TOI DE JOUER !",440,1300,32,"#d6b4f3");
+}
+
+function drawQuestion(index,phase,remaining){
+ background();
+ drawHeader();
+
+ const q=quiz[index];
+
+ roundRect(130,270,620,13,8,"#ffffff25");
+ roundRect(130,270,620*((index+1)/5),13,8,"#ed5bc9");
+
+ text("QUESTION "+(index+1)+" / 5",440,355,34,"#e9c9ff");
+ text(q.theme.toUpperCase(),440,420,25,"#c6a1e8");
+
+ text(q.question,440,510,34,"white");
+
+ drawImage(q,190,600,500,390);
+
+ const positions=[
+  [115,1080],[450,1080],
+  [115,1290],[450,1290]
+ ];
+
+ q.options.forEach((option,i)=>{
+  const [x,y]=positions[i];
+  const correct=option===q.answer;
+
+  let color="#29163e";
+  let stroke="#68428a";
+
+  if(phase==="reveal"&&correct){
+   color="#147a48";
+   stroke="#55f0a0";
+  }
+
+  roundRect(x,y,300,170,24,color,stroke);
+  text(String(i+1),x+150,y+43,30,"#ff8bdd");
+
+  ctx.font="bold 24px Arial";
+  ctx.fillStyle="white";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+
+  const words=option.length>24?option.slice(0,23)+"…":option;
+  ctx.fillText(words,x+150,y+108,270);
+ });
+
+ if(phase==="reveal"){
+  roundRect(125,1510,630,100,25,"#421b58","#f17bda");
+  text("✓ "+q.answer.toUpperCase(),440,1560,30,"white");
+ }else{
+  const value=Math.max(0,remaining);
+
+  ctx.beginPath();
+  ctx.arc(440,1600,52,-Math.PI/2,
+   -Math.PI/2+Math.PI*2*(value/ANSWER_SECONDS));
+  ctx.strokeStyle="#ff70d7";
+  ctx.lineWidth=12;
+  ctx.stroke();
+
+  text(String(Math.ceil(value)),440,1600,48,"white");
+ }
+}
+
+function drawEnd(){
+ background();
+ drawHeader();
+
+ text("🏆",440,580,120,"#ff8bdc");
+ text("ALORS ?",440,770,65,"white");
+ text("TON SCORE SUR 5 ?",440,900,48,"#ffb5e9");
+
+ roundRect(120,1080,640,125,28,"#39164e","#a54cff");
+ text("ABONNE-TOI !",440,1142,48,"white");
+
+ text("POUR LES PROCHAINS QUIZ",440,1260,31,"#e6caff");
+ text("quizzzz123_",440,1430,34,"#ff8bdf");
+}
+
+/* =====================================================
+   APERCU ANIME
+===================================================== */
+
+$("previewBtn").onclick=async()=>{
+ if(busy)return;
+
+ try{
+  if(!quiz.length)chooseQuiz();
+
+  await loadImages();
+
+  if(animation)cancelAnimationFrame(animation);
+
+  const start=performance.now();
+
+  function loop(now){
+   const t=(now-start)/1000;
+
+   if(t<2.5){
+    drawIntro();
+   }else{
+    let elapsed=t-2.5;
+    let index=0;
+
+    while(index<5){
+     const duration=ANSWER_SECONDS+REVEAL_SECONDS;
+     if(elapsed<duration)break;
+     elapsed-=duration;
+     index++;
+    }
+
+    if(index>=5){
+     drawEnd();
+    }else if(elapsed<ANSWER_SECONDS){
+     drawQuestion(index,"thinking",ANSWER_SECONDS-elapsed);
+    }else{
+     drawQuestion(index,"reveal",0);
+    }
+   }
+
+   animation=requestAnimationFrame(loop);
+  }
+
+  animation=requestAnimationFrame(loop);
+  status("Aperçu animé lancé. Les images et les temps sont affichés.");
+
+ }catch(error){
+  status("Erreur : "+error.message);
+ }
+};
+
+/* =====================================================
+   GENERATION DE LA VOIX
+===================================================== */
+
+function getGender(){
+ return $("voice").value;
+}
+
+async function getVoice(){
+ const gender=getGender();
+
+ const url=
+  "https://api.tts.ai/v1/voices/?language=fr&model=kokoro&gender="+gender;
+
+ let response=await fetch(url);
+
+ if(!response.ok){
+  response=await fetch("https://api.tts.ai/v1/voices/?language=fr");
+ }
+
+ if(!response.ok){
+  throw Error("Impossible de récupérer les voix françaises.");
+ }
+
+ const data=await response.json();
+ const voices=data.voices||[];
+
+ let selected=voices.find(v=>
+  (v.gender||"").toLowerCase()===gender&&
+  (v.language||"").toLowerCase().startsWith("fr")
+ );
+
+ if(!selected){
+  selected=voices.find(v=>
+   (v.language||"").toLowerCase().startsWith("fr")
+  );
+ }
+
+ if(!selected)throw Error("Aucune voix française disponible.");
+
+ return selected.id;
+}
+
+async function speech(value,voice){
+ const response=await fetch("https://api.tts.ai/v1/tts/",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   model:"kokoro",
+   text:value,
+   voice:voice,
+   language:"fr",
+   format:"mp3",
+   speed:1
+  })
+ });
+
+ if(!response.ok){
+  throw Error("Erreur TTS.ai : "+response.status);
+ }
+
+ const job=await response.json();
+
+ if(!job.uuid){
+  throw Error("La génération vocale n'a pas retourné d'identifiant.");
+ }
+
+ for(let i=0;i<120;i++){
+  await wait(1500);
+
+  const check=await fetch(
+   "https://api.tts.ai/v1/speech/results/?uuid="+
+   encodeURIComponent(job.uuid)
+  );
+
+  if(!check.ok)continue;
+
+  const result=await check.json();
+
+  if(result.status==="failed"){
+   throw Error(result.error||"La voix n'a pas pu être générée.");
+  }
+
+  if(result.status==="completed"&&result.result_url){
+   const audioResponse=await fetch(result.result_url);
+
+   if(!audioResponse.ok){
+    throw Error("Impossible de télécharger le fichier audio.");
+   }
+
+   return await audioResponse.arrayBuffer();
   }
  }
- return pool.sort(()=>Math.random()-.5).slice(0,5);
+
+ throw Error("La génération vocale prend trop de temps.");
 }
 
-async function questionImage(name){
- let cache={};
- try{cache=JSON.parse(localStorage.getItem(IMAGE_KEY)||"{}")}catch(e){}
- if(cache[name])return cache[name];
- try{
-  let r=await fetch("https://fr.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(name));
-  if(!r.ok)return null;
-  let d=await r.json(),url=d.thumbnail?.source||d.originalimage?.source;
-  if(url){cache[name]=url;localStorage.setItem(IMAGE_KEY,JSON.stringify(cache))}
-  return url||null;
- }catch(e){return null}
-}
+/* =====================================================
+   PREPARATION AUDIO
+===================================================== */
 
-function shuffled(q){
- return q.a.map((text,i)=>({text,correct:i===q.correct})).sort(()=>Math.random()-.5);
-}
-function rounded(ctx,x,y,w,h,r,color){
- ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();
-}
-function textLines(ctx,text,x,y,width,lineHeight){
- let words=text.split(" "),lines=[],line="";
- for(let word of words){
-  let test=line+word+" ";
-  if(ctx.measureText(test).width>width&&line){lines.push(line.trim());line=word+" "}else line=test;
+async function prepareAudio(audioContext){
+ const voice=await getVoice();
+ const segments=[];
+
+ status("Création de la voix d'introduction...");
+
+ const intro=await speech($("intro").value,voice);
+
+ segments.push({
+  type:"intro",
+  buffer:await audioContext.decodeAudioData(intro)
+ });
+
+ for(let i=0;i<quiz.length;i++){
+  const q=quiz[i];
+
+  status("Préparation de la voix : question "+(i+1)+"/5...");
+
+  const questionAudio=await speech(
+   "Question "+(i+1)+". "+q.question,
+   voice
+  );
+
+  const answerAudio=await speech(
+   "Réponse : "+q.answer+".",
+   voice
+  );
+
+  segments.push({
+   type:"question",
+   index:i,
+   question:await audioContext.decodeAudioData(questionAudio),
+   answer:await audioContext.decodeAudioData(answerAudio)
+  });
  }
- if(line)lines.push(line.trim());
- let start=y-(lines.length-1)*lineHeight/2;
- lines.forEach((v,i)=>ctx.fillText(v,x,start+i*lineHeight));
-}
-function draw(ctx,state){
- let W=1080,H=1920;
- let g=ctx.createLinearGradient(0,0,W,H);
- g.addColorStop(0,"#1c0831");g.addColorStop(.6,"#090014");g.addColorStop(1,"#32104b");
- ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- ctx.textAlign="center";ctx.fillStyle="#c084fc";ctx.font="bold 56px Arial";
- ctx.fillText("quizzzz123_",W/2,100);
- ctx.fillStyle="#fff";ctx.font="bold 30px Arial";ctx.fillText("LE QUIZ DU JOUR",W/2,165);
- rounded(ctx,70,205,940,12,8,"#39234f");
- rounded(ctx,70,205,940*(state.index+1)/5,12,8,"#c026d3");
 
- if(state.final){
-  ctx.fillStyle="#fff";ctx.font="bold 82px Arial";ctx.fillText("BRAVO !",540,470);
-  ctx.font="bold 48px Arial";ctx.fillText("Tu as terminé le quiz !",540,570);
-  ctx.fillStyle="#d8b4fe";ctx.font="bold 44px Arial";
-  ctx.fillText("Donne ton score sur cinq",540,790);
-  ctx.fillText("et abonne-toi pour les",540,860);
-  ctx.fillText("prochains quiz !",540,930);
+ status("Préparation de la phrase finale...");
+
+ const outroAudio=await speech(
+  "Alors, donne ton score sur cinq et abonne-toi pour les prochains quiz !",
+  voice
+ );
+
+ segments.push({
+  type:"outro",
+  buffer:await audioContext.decodeAudioData(outroAudio)
+ });
+
+ return segments;
+}
+
+/* =====================================================
+   SYNCHRONISATION VIDEO ET AUDIO
+===================================================== */
+
+function buildTimeline(segments){
+ timeline=[];
+ audioEvents=[];
+
+ let cursor=0;
+
+ function addAudio(buffer){
+  audioEvents.push({buffer,start:cursor});
+  cursor+=buffer.duration;
+ }
+
+ const introDuration=segments[0].buffer.duration;
+
+ timeline.push({
+  type:"intro",
+  start:cursor,
+  end:cursor+introDuration+0.3
+ });
+
+ addAudio(segments[0].buffer);
+ cursor+=0.3;
+
+ for(let i=1;i<=5;i++){
+  const segment=segments[i];
+
+  const questionStart=cursor;
+
+  addAudio(segment.question);
+
+  timeline.push({
+   type:"question",
+   index:segment.index,
+   start:questionStart,
+   end:cursor
+  });
+
+  // 4 secondes de réflexion.
+  const thinkingStart=cursor;
+
+  timeline.push({
+   type:"thinking",
+   index:segment.index,
+   start:thinkingStart,
+   end:thinkingStart+ANSWER_SECONDS
+  });
+
+  cursor+=ANSWER_SECONDS;
+
+  // La réponse est annoncée et affichée.
+  const revealStart=cursor;
+
+  addAudio(segment.answer);
+
+  timeline.push({
+   type:"reveal",
+   index:segment.index,
+   start:revealStart,
+   end:revealStart+REVEAL_SECONDS
+  });
+
+  // On conserve les deux secondes demandées.
+  cursor+=REVEAL_SECONDS;
+ }
+
+ const outro=segments[6].buffer;
+ const outroStart=cursor;
+
+ timeline.push({
+  type:"end",
+  start:outroStart,
+  end:outroStart+outro.duration+2
+ });
+
+ addAudio(outro);
+ cursor+=outro.duration+2;
+
+ totalDuration=cursor;
+}
+
+function renderAt(time){
+ const scene=timeline.find(s=>
+  time>=s.start&&time<s.end
+ );
+
+ if(!scene){
+  if(time>=totalDuration)drawEnd();
+  else drawIntro();
   return;
  }
- let q=state.q;
- ctx.fillStyle="#d8b4fe";ctx.font="bold 30px Arial";
- ctx.fillText(q.theme.toUpperCase()+" • "+q.level.toUpperCase(),540,280);
- rounded(ctx,130,330,820,490,25,"#24113a");
- if(state.image){
-  ctx.save();ctx.beginPath();ctx.roundRect(130,330,820,490,25);ctx.clip();
-  let scale=Math.max(820/state.image.width,490/state.image.height);
-  let w=state.image.width*scale,h=state.image.height*scale;
-  ctx.drawImage(state.image,(1080-w)/2,330+(490-h)/2,w,h);ctx.restore();
- }else{
-  ctx.fillStyle="#c084fc";ctx.font="bold 120px Arial";ctx.fillText("?",540,620);
- }
- ctx.fillStyle="#fff";ctx.font="bold 51px Arial";
- textLines(ctx,q.q,540,940,920,65);
- state.options.forEach((o,i)=>{
-  let y=1110+i*145;
-  rounded(ctx,85,y,910,112,20,state.reveal&&o.correct?"#176b48":"#291542");
-  ctx.textAlign="left";ctx.fillStyle="#d8b4fe";ctx.font="bold 38px Arial";
-  ctx.fillText(String.fromCharCode(65+i),125,y+70);
-  ctx.textAlign="center";ctx.fillStyle="#fff";ctx.font="bold 34px Arial";
-  textLines(ctx,o.text,590,y+58,720,42);
- });
- if(state.reveal){
-  ctx.fillStyle="#86efac";ctx.font="bold 42px Arial";
-  ctx.fillText("BONNE RÉPONSE : "+q.a[q.correct],540,1770);
- }else{
-  ctx.fillStyle="#f0abfc";ctx.font="bold 70px Arial";
-  ctx.fillText(state.remaining,540,1770);
+
+ if(scene.type==="intro"){
+  drawIntro();
+ }else if(scene.type==="question"){
+  drawQuestion(scene.index,"thinking",ANSWER_SECONDS);
+ }else if(scene.type==="thinking"){
+  const remaining=ANSWER_SECONDS-(time-scene.start);
+  drawQuestion(scene.index,"thinking",remaining);
+ }else if(scene.type==="reveal"){
+  drawQuestion(scene.index,"reveal",0);
+ }else if(scene.type==="end"){
+  drawEnd();
  }
 }
 
-async function makeVoice(text){
- let voice="af_heart";
- try{
-  let r=await fetch("https://api.tts.ai/v1/voices/?language=fr&model=kokoro");
-  if(r.ok){let d=await r.json(),list=Array.isArray(d)?d:(d.voices||d.results||[]);if(list.length)voice=list[0].id||list[0].name||voice}
- }catch(e){}
- let r=await fetch("https://api.tts.ai/v1/tts/",{
-  method:"POST",headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({model:"kokoro",text,voice,language:"fr",format:"mp3",speed:1})
- });
- if(!r.ok)throw Error("Le service vocal n'a pas répondu.");
- let d=await r.json();
- if(d.audio_url||d.url||d.result_url)return d.audio_url||d.url||d.result_url;
- if(d.uuid){
-  for(let i=0;i<40;i++){
-   await sleep(1000);
-   let p=await fetch("https://api.tts.ai/v1/speech/results/?uuid="+encodeURIComponent(d.uuid));
-   if(!p.ok)continue;
-   let v=await p.json();
-   if(v.result_url||v.audio_url)return v.result_url||v.audio_url;
-   if(v.status==="failed")throw Error("La génération de la voix a échoué.");
-  }
- }
- throw Error("Impossible de récupérer l'audio.");
-}
+/* =====================================================
+   ENREGISTREMENT VIDEO
+===================================================== */
 
-async function generate(){
- if(busy)return;
- busy=true;$("generate").disabled=true;$("download").style.display="none";
- $("preview").removeAttribute("src");progress(0);
+async function recordOneVideo(){
+ let audioContext=null;
+ let videoStream=null;
+ let stream=null;
+ let raf=0;
+ let sources=[];
+ let recorder=null;
+
  try{
-  let qs=chooseQuestions();
-  if(qs.length<5)throw Error("Il ne reste pas cinq questions disponibles dans ce filtre. Change de thème ou mets à jour la banque.");
-  let prepared=[];
   status("Recherche des images...");
-  for(let i=0;i<5;i++){
-   let url=await questionImage(qs[i].img),img=null;
-   if(url){
-    img=new Image();img.crossOrigin="anonymous";img.src=url;
-    try{await img.decode()}catch(e){img=null}
-   }
-   prepared.push({q:qs[i],options:shuffled(qs[i]),image:img});
-   progress(5+i*2);
+  await loadImages();
+
+  const AudioContextClass=
+   window.AudioContext||window.webkitAudioContext;
+
+  if(!AudioContextClass){
+   throw Error("AudioContext non disponible.");
   }
-  status("Création de la voix...");
-  let narration=[];
-  prepared.forEach((p,i)=>{
-   narration.push("Question "+(i+1)+". "+p.q.q+".");
-   p.options.forEach((o,j)=>narration.push(String.fromCharCode(65+j)+". "+o.text+"."));
-   narration.push("La bonne réponse est "+p.q.a[p.q.correct]+".");
+
+  audioContext=new AudioContextClass();
+  await audioContext.resume();
+
+  status("Préparation des voix...");
+  const segments=await prepareAudio(audioContext);
+
+  buildTimeline(segments);
+
+  if(!canvas.captureStream||!window.MediaRecorder){
+   throw Error("Enregistrement non compatible. Essaie Chrome sur ordinateur.");
+  }
+
+  const mimeTypes=[
+   "video/mp4;codecs=avc1,mp4a.40.2",
+   "video/mp4",
+   "video/webm;codecs=vp9,opus",
+   "video/webm;codecs=vp8,opus",
+   "video/webm"
+  ];
+
+  const mimeType=mimeTypes.find(type=>
+   MediaRecorder.isTypeSupported(type)
+  );
+
+  if(!mimeType){
+   throw Error("Aucun format vidéo compatible trouvé.");
+  }
+
+  const audioDestination=
+   audioContext.createMediaStreamDestination();
+
+  videoStream=canvas.captureStream(30);
+
+  stream=new MediaStream([
+   ...videoStream.getVideoTracks(),
+   ...audioDestination.stream.getAudioTracks()
+  ]);
+
+  recorder=new MediaRecorder(stream,{mimeType});
+
+  const chunks=[];
+
+  recorder.ondataavailable=event=>{
+   if(event.data&&event.data.size>0){
+    chunks.push(event.data);
+   }
+  };
+
+  const recordingFinished=new Promise((resolve,reject)=>{
+   recorder.onstop=resolve;
+   recorder.onerror=()=>{
+    reject(Error("Erreur pendant l'enregistrement vidéo."));
+   };
   });
-  narration.push("Alors, donne ton score sur cinq et abonne-toi pour les prochains quiz !");
-  let audioUrl=await makeVoice(narration.join(" "));
-  progress(20);
-  let audioResponse=await fetch(audioUrl);
-  if(!audioResponse.ok)throw Error("Impossible de télécharger la voix.");
-  let audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  await audioCtx.resume();
-  let audio=await audioCtx.decodeAudioData(await audioResponse.arrayBuffer());
-  let canvas=document.createElement("canvas");canvas.width=1080;canvas.height=1920;
-  let ctx=canvas.getContext("2d");
-  let videoStream=canvas.captureStream(30);
-  let source=audioCtx.createBufferSource();source.buffer=audio;
-  let dest=audioCtx.createMediaStreamDestination();source.connect(dest);
-  let stream=new MediaStream([...videoStream.getVideoTracks(),...dest.stream.getAudioTracks()]);
-  let types=["video/mp4;codecs=h264,aac","video/webm;codecs=vp9,opus","video/webm"];
-  let mime=types.find(t=>MediaRecorder.isTypeSupported(t))||"";
-  let recorder=new MediaRecorder(stream,mime?{mimeType:mime}:{});
-  let chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-  let stopped=new Promise(resolve=>recorder.onstop=resolve);
-  recorder.start(1000);
-  let start=audioCtx.currentTime+.3;
-  source.start(start);
-  let duration=audio.duration;
-  let intro=1;
-  let questionTime=Math.max(5,(duration-intro-2)/5);
-  await sleep(intro*1000);
-  for(let i=0;i<5;i++){
-   let p=prepared[i],begin=Date.now();
-   while(Date.now()-begin<questionTime*700){
-    let remaining=Math.max(1,Math.ceil((questionTime*700-(Date.now()-begin))/1000));
-    draw(ctx,{index:i,q:p.q,options:p.options,image:p.image,remaining});
-    await sleep(120);
+
+  renderAt(0);
+  recorder.start(250);
+
+  const audioStart=audioContext.currentTime+0.35;
+
+  audioEvents.forEach(event=>{
+   const source=audioContext.createBufferSource();
+
+   source.buffer=event.buffer;
+   source.connect(audioDestination);
+   source.start(audioStart+event.start);
+
+   sources.push(source);
+  });
+
+  await new Promise((resolve,reject)=>{
+   function frame(){
+    if(audioContext.state==="closed"){
+     reject(Error("Le moteur audio s'est arrêté."));
+     return;
+    }
+
+    const elapsed=audioContext.currentTime-audioStart;
+    const currentTime=Math.max(0,elapsed);
+
+    renderAt(currentTime);
+
+    const percent=Math.min(
+     100,
+     Math.floor(currentTime/totalDuration*100)
+    );
+
+    status("Enregistrement : "+percent+" %");
+
+    if(currentTime>=totalDuration){
+     renderAt(totalDuration);
+     resolve();
+     return;
+    }
+
+    raf=requestAnimationFrame(frame);
    }
-   draw(ctx,{index:i,q:p.q,options:p.options,image:p.image,reveal:true});
-   await sleep(900);
-   progress(25+i*13);
+
+   raf=requestAnimationFrame(frame);
+  });
+
+  cancelAnimationFrame(raf);
+
+  await wait(200);
+
+  recorder.stop();
+  await recordingFinished;
+
+  return new Blob(chunks,{type:mimeType});
+
+ }finally{
+  if(raf)cancelAnimationFrame(raf);
+
+  if(recorder&&recorder.state!=="inactive"){
+   try{recorder.stop()}catch(e){}
   }
-  draw(ctx,{index:4,final:true});
-  let wait=Math.max(0,(start+duration-audioCtx.currentTime)*1000);
-  await sleep(wait+1200);
-  recorder.stop();await stopped;
-  stream.getTracks().forEach(t=>t.stop());await audioCtx.close();
-  let blob=new Blob(chunks,{type:recorder.mimeType||"video/webm"});
-  let url=URL.createObjectURL(blob);
-  $("preview").src=url;
-  let ext=blob.type.includes("mp4")?"mp4":"webm";
-  $("download").href=url;$("download").download="quizzzz123_video."+ext;
-  $("download").textContent="⬇ Télécharger la vidéo";$("download").style.display="block";
-  let h=history(),now=new Date().toISOString();
-  prepared.forEach(p=>h.push({id:p.q.id,usedAt:now}));
-  localStorage.setItem(KEY,JSON.stringify(h));
-  status("Vidéo terminée ! Tu peux la regarder et la télécharger.");
-  progress(100);
- }catch(e){console.error(e);status("Erreur : "+e.message)}
- finally{busy=false;$("generate").disabled=false}
+
+  sources.forEach(source=>{
+   try{source.stop()}catch(e){}
+  });
+
+  if(stream){
+   stream.getTracks().forEach(track=>track.stop());
+  }
+
+  if(videoStream){
+   videoStream.getTracks().forEach(track=>track.stop());
+  }
+
+  if(audioContext&&audioContext.state!=="closed"){
+   await audioContext.close();
+  }
+ }
 }
 
-$("generate").addEventListener("click",generate);
-$("export").addEventListener("click",()=>{
- let data={app:"quizzzz123_",version:1,exportedAt:new Date().toISOString(),history:history()};
- let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
- let url=URL.createObjectURL(blob),a=document.createElement("a");
- a.href=url;a.download="quizzzz123_historique.json";a.click();
- URL.revokeObjectURL(url);status("Historique exporté.");
-});
-$("importBtn").addEventListener("click",()=>$("importFile").click());
-$("importFile").addEventListener("change",async e=>{
- let file=e.target.files[0];if(!file)return;
+/* =====================================================
+   TELECHARGEMENT
+===================================================== */
+
+function downloadBlob(blob,filename){
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+
+ link.href=url;
+ link.download=filename;
+
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+
+ setTimeout(()=>URL.revokeObjectURL(url),120000);
+}
+
+/* =====================================================
+   GENERER UNE VIDEO
+===================================================== */
+
+async function generateSingle(){
+ if(busy)return;
+
+ busy=true;
+ setButtons(true);
+
  try{
-  let data=JSON.parse(await file.text()),entries=Array.isArray(data)?data:data.history;
-  if(!Array.isArray(entries))throw Error("Fichier invalide.");
-  let merged=history(),ids=new Set(merged.map(x=>x.id));
-  entries.forEach(x=>{if(x.id&&!ids.has(x.id)){merged.push(x);ids.add(x.id)}});
-  localStorage.setItem(KEY,JSON.stringify(merged));status("Historique importé avec succès.");
- }catch(err){status("Erreur d'importation : "+err.message)}
- e.target.value="";
-});
-$("total").textContent=QUESTIONS.length+" questions de test";
+  if(!quiz.length)chooseQuiz();
+
+  if(animation){
+   cancelAnimationFrame(animation);
+   animation=null;
+  }
+
+  const blob=await recordOneVideo();
+
+  const extension=blob.type.includes("mp4")?"mp4":"webm";
+
+  downloadBlob(
+   blob,
+   "quizzzz123_"+Date.now()+"."+extension
+  );
+
+  status("Vidéo terminée ! Vérifie tes téléchargements.");
+
+ }catch(error){
+  console.error(error);
+  status("Erreur : "+error.message);
+
+ }finally{
+  busy=false;
+  setButtons(false);
+ }
+}
+
+/* =====================================================
+   GENERER 5 VIDEOS DANS UN ZIP
+===================================================== */
+
+async function generateFive(){
+ if(busy)return;
+
+ if(typeof JSZip==="undefined"){
+  status("Impossible de charger le système ZIP. Recharge la page.");
+  return;
+ }
+
+ busy=true;
+ setButtons(true);
+
+ try{
+  if(animation){
+   cancelAnimationFrame(animation);
+   animation=null;
+  }
+
+  const zip=new JSZip();
+  let extension="webm";
+
+  for(let i=0;i<5;i++){
+   status("Préparation de la vidéo "+(i+1)+"/5...");
+
+   chooseQuiz();
+
+   const blob=await recordOneVideo();
+
+   extension=blob.type.includes("mp4")?"mp4":"webm";
+
+   zip.file(
+    "quizzzz123_video_"+(i+1)+"."+extension,
+    blob
+   );
+
+   status(
+    "Vidéo "+(i+1)+"/5 terminée !\nPréparation de la suite..."
+   );
+  }
+
+  status("Création du fichier ZIP...");
+
+  const zipBlob=await zip.generateAsync({
+   type:"blob",
+   compression:"DEFLATE",
+   compressionOptions:{level:3}
+  },metadata=>{
+   status("Création du ZIP : "+Math.floor(metadata.percent)+" %");
+  });
+
+  downloadBlob(zipBlob,"quizzzz123_5_videos.zip");
+
+  status("Terminé ! Ton ZIP contient les 5 vidéos séparées.");
+
+ }catch(error){
+  console.error(error);
+  status("Erreur : "+error.message);
+
+ }finally{
+  busy=false;
+  setButtons(false);
+ }
+}
+
+/* =====================================================
+   BOUTONS ET INITIALISATION
+===================================================== */
+
+function setButtons(disabled){
+ $("generate").disabled=disabled;
+ $("generateFive").disabled=disabled;
+ $("newQuiz").disabled=disabled;
+ $("previewBtn").disabled=disabled;
+}
+
+$("newQuiz").onclick=()=>{
+ if(busy)return;
+
+ if(animation){
+  cancelAnimationFrame(animation);
+  animation=null;
+ }
+
+ try{
+  chooseQuiz();
+  drawIntro();
+  status("Nouveau quiz créé ! Thème : "+$("theme").value);
+ }catch(error){
+  status("Erreur : "+error.message);
+ }
+};
+
+$("theme").onchange=()=>{
+ if(busy)return;
+
+ try{
+  chooseQuiz();
+  drawIntro();
+  status("Thème sélectionné : "+$("theme").value);
+ }catch(error){
+  status(error.message);
+ }
+};
+
+$("difficulty").onchange=()=>{
+ if(busy)return;
+
+ try{
+  chooseQuiz();
+  drawIntro();
+  status("Difficulté mise à jour !");
+ }catch(error){
+  status(error.message);
+ }
+};
+
+$("generate").onclick=generateSingle;
+$("generateFive").onclick=generateFive;
+
+try{
+ chooseQuiz();
+ drawIntro();
+}catch(error){
+ status(error.message);
+}
 </script>
 </body>
 </html>
