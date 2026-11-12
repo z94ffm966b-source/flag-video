@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080014">
 <title>quizzzz123_ — Flag Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *{box-sizing:border-box}
 body{
@@ -34,10 +35,11 @@ button{
  width:100%;padding:16px;border:0;border-radius:13px;
  background:linear-gradient(100deg,#873cff,#ed4fc6);
  color:white;font-weight:bold;font-size:15px;margin-top:12px;
- box-shadow:0 5px 18px #a33aff44;
+ box-shadow:0 5px 18px #a33aff44;cursor:pointer;
 }
 button.secondary{background:#302044;border:1px solid #67408a;box-shadow:none}
-button:disabled{opacity:.45}
+button.batch{background:linear-gradient(100deg,#d12c9b,#873cff)}
+button:disabled{opacity:.45;cursor:not-allowed}
 .preview{
  width:min(100%,330px);aspect-ratio:9/16;margin:18px auto;
  border:2px solid #8d54bd;border-radius:18px;overflow:hidden;
@@ -79,7 +81,9 @@ canvas{width:100%;height:100%;display:block}
 
 <button id="newQuiz">🎲 Créer un nouveau quiz</button>
 <button id="previewBtn" class="secondary">▶ Aperçu animé</button>
-<button id="generate">🎬 Générer ma vidéo</button>
+<button id="generate">🎬 Générer 1 vidéo</button>
+<button id="generateFive" class="batch">🚀 Générer 5 vidéos (ZIP)</button>
+
 <div class="status" id="status">Prêt à créer ton quiz !</div>
 </section>
 
@@ -116,6 +120,7 @@ const countries=[
 ["TL","Timor oriental","EXPERT"],["ST","Sao Tomé-et-Principe","EXPERT"]
 ];
 
+const ANSWER_SECONDS=5;
 const $=id=>document.getElementById(id);
 const canvas=$("screen");
 const ctx=canvas.getContext("2d");
@@ -137,12 +142,27 @@ function shuffle(array){
  return a;
 }
 
+function getHistory(){
+ try{
+  return JSON.parse(localStorage.getItem("quizzzz_history")||"[]");
+ }catch(e){return []}
+}
+
+function saveHistory(codes){
+ try{
+  let history=getHistory();
+  history.unshift(codes);
+  history=history.slice(0,20);
+  localStorage.setItem("quizzzz_history",JSON.stringify(history));
+ }catch(e){}
+}
+
 function chooseQuiz(){
  const mode=$("difficulty").value;
  let levels;
 
  if(mode==="mix"){
-  levels=["FACILE","FACILE","MOYEN","DIFFICILE","EXPERT"];
+  levels=["FACILE","MOYEN","DIFFICILE","DIFFICILE","EXPERT"];
  }else if(mode==="hard"){
   levels=["MOYEN","DIFFICILE","DIFFICILE","EXPERT","EXPERT"];
  }else{
@@ -151,16 +171,42 @@ function chooseQuiz(){
   );
  }
 
- quiz=[];
- for(const level of shuffle(levels)){
-  let pool=countries.filter(c=>
-   c[2]===level&&!quiz.some(q=>q.country[0]===c[0])
-  );
-  if(!pool.length)pool=countries.filter(c=>!quiz.some(q=>q.country[0]===c[0]));
-  const country=shuffle(pool)[0];
-  const wrong=shuffle(countries.filter(c=>c[0]!==country[0])).slice(0,3);
-  quiz.push({country,options:shuffle([country,...wrong])});
+ const history=getHistory();
+ const recentCodes=new Set(history.slice(0,2).flat());
+ const recentSets=new Set(history.map(a=>[...a].sort().join("-")));
+
+ let best=null;
+ let bestScore=-Infinity;
+
+ // On essaie plusieurs combinaisons pour limiter les répétitions.
+ for(let attempt=0;attempt<100;attempt++){
+  const selected=[];
+  for(const level of shuffle(levels)){
+   let pool=countries.filter(c=>
+    c[2]===level&&!selected.some(q=>q[0]===c[0])
+   );
+   if(!pool.length)pool=countries.filter(c=>!selected.some(q=>q[0]===c[0]));
+   selected.push(shuffle(pool)[0]);
+  }
+
+  const signature=selected.map(c=>c[0]).sort().join("-");
+  const overlap=selected.filter(c=>recentCodes.has(c[0])).length;
+  let score=Math.random()*10-overlap*3;
+  if(recentSets.has(signature))score-=100;
+
+  if(score>bestScore){
+   bestScore=score;
+   best=selected;
+  }
+  if(!recentSets.has(signature)&&overlap<=1)break;
  }
+
+ quiz=best.map(country=>{
+  const wrong=shuffle(countries.filter(c=>c[0]!==country[0])).slice(0,3);
+  return {country,options:shuffle([country,...wrong])};
+ });
+
+ saveHistory(quiz.map(q=>q.country[0]));
 }
 
 function status(message){$("status").textContent=message}
@@ -306,7 +352,7 @@ function drawQuestion(index,phase,remaining){
  }else if(phase==="thinking"){
   const value=Math.max(0,remaining);
   ctx.beginPath();
-  ctx.arc(440,1500,58,-Math.PI/2,-Math.PI/2+Math.PI*2*(value/6));
+  ctx.arc(440,1500,58,-Math.PI/2,-Math.PI/2+Math.PI*2*(value/ANSWER_SECONDS));
   ctx.strokeStyle="#ff70d7";
   ctx.lineWidth=12;
   ctx.stroke();
@@ -326,9 +372,8 @@ function drawEnd(){
  text("quizzzz123_",440,1430,34,"#ff8bdf");
 }
 
-// Un seul calendrier de scènes : aucune période vide.
 function addScene(type,start,end,extra={}){
- timeline.push({type,start,end,...extra});
+ if(end>start)timeline.push({type,start,end,...extra});
 }
 
 function renderAt(time){
@@ -336,7 +381,8 @@ function renderAt(time){
 
  if(!scene){
   if(time<0)drawIntro();
-  else drawEnd();
+  else if(time>=totalDuration)drawEnd();
+  else drawIntro();
   return;
  }
 
@@ -345,8 +391,7 @@ function renderAt(time){
  }else if(scene.type==="questionIntro"){
   drawQuestion(scene.index,"intro",0);
  }else if(scene.type==="thinking"){
-  const elapsed=time-scene.start;
-  drawQuestion(scene.index,"thinking",Math.max(0,6-elapsed));
+  drawQuestion(scene.index,"thinking",Math.max(0,ANSWER_SECONDS-(time-scene.start)));
  }else if(scene.type==="reveal"){
   drawQuestion(scene.index,"reveal",0);
  }else if(scene.type==="end"){
@@ -354,7 +399,6 @@ function renderAt(time){
  }
 }
 
-// TTS.ai : récupération de la voix
 async function getVoice(){
  const gender=$("voice").value;
  const url="https://api.tts.ai/v1/voices/?language=fr&model=kokoro&gender="+gender;
@@ -429,7 +473,6 @@ async function speech(value,voice){
  throw Error("La génération vocale prend trop de temps.");
 }
 
-// Tous les sons sont chargés AVANT le début de l'enregistrement.
 async function prepareAudio(audioContext){
  const voice=await getVoice();
  const segments=[];
@@ -476,7 +519,6 @@ async function prepareAudio(audioContext){
  return segments;
 }
 
-// Construction des scènes et des départs audio.
 function buildTimeline(segments){
  timeline=[];
  audioEvents=[];
@@ -487,37 +529,37 @@ function buildTimeline(segments){
   cursor+=buffer.duration;
  }
 
- // Introduction
- addScene("intro",cursor,cursor+segments[0].buffer.duration);
+ // Introduction : aucune période vide après l'intro.
+ const introDuration=segments[0].buffer.duration;
+ addScene("intro",cursor,cursor+introDuration+0.5);
  addAudio(segments[0].buffer);
  cursor+=0.5;
 
- // Questions
  for(let i=1;i<=5;i++){
   const segment=segments[i];
 
-  // La question parlée
+  // Question parlée.
   const questionStart=cursor;
   addAudio(segment.question);
   addScene("questionIntro",questionStart,cursor,{index:segment.index});
 
-  // Six secondes exactes après la fin de la question parlée
+  // 5 secondes de réflexion après la fin de la question.
   const thinkingStart=cursor;
-  addScene("thinking",thinkingStart,thinkingStart+6,{index:segment.index});
-  cursor+=6;
+  addScene("thinking",thinkingStart,thinkingStart+ANSWER_SECONDS,{index:segment.index});
+  cursor+=ANSWER_SECONDS;
 
-  // La réponse est affichée exactement au départ de sa voix
+  // Réponse et voix démarrent exactement ensemble.
   const revealStart=cursor;
   addAudio(segment.answer);
   addScene("reveal",revealStart,cursor,{index:segment.index});
 
-  // Petite pause visuelle avant le pays suivant
+  // Petite pause après la réponse.
   const pauseStart=cursor;
   cursor+=0.6;
   addScene("reveal",pauseStart,cursor,{index:segment.index});
  }
 
- // Fin : phrase parlée et écran final ensemble
+ // L'écran final apparaît uniquement avec la phrase finale.
  const outro=segments[6].buffer;
  const outroStart=cursor;
  addAudio(outro);
@@ -527,14 +569,7 @@ function buildTimeline(segments){
  totalDuration=cursor+2;
 }
 
-// Enregistrement piloté par l'horloge audio.
-async function generate(){
- if(busy)return;
- busy=true;
- $("generate").disabled=true;
- $("newQuiz").disabled=true;
- $("previewBtn").disabled=true;
-
+async function recordOneVideo(){
  let audioContext=null;
  let videoStream=null;
  let stream=null;
@@ -543,27 +578,21 @@ async function generate(){
  let recorder=null;
 
  try{
-  if(!quiz.length)chooseQuiz();
-  if(animation){
-   cancelAnimationFrame(animation);
-   animation=null;
-  }
-
   status("Chargement des drapeaux...");
   await loadFlags();
 
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-  if(!AudioContextClass)throw Error("AudioContext non disponible sur ce navigateur.");
+  if(!AudioContextClass)throw Error("AudioContext non disponible.");
 
   audioContext=new AudioContextClass();
   await audioContext.resume();
 
-  status("Préparation de toutes les voix...");
+  status("Préparation des voix...");
   const segments=await prepareAudio(audioContext);
   buildTimeline(segments);
 
   if(!canvas.captureStream||!window.MediaRecorder){
-   throw Error("L'enregistrement vidéo n'est pas compatible avec ce navigateur. Essaie Chrome sur ordinateur.");
+   throw Error("Enregistrement non compatible. Essaie Chrome sur ordinateur.");
   }
 
   const mimeTypes=[
@@ -597,11 +626,9 @@ async function generate(){
    recorder.onerror=()=>reject(Error("Erreur pendant l'enregistrement vidéo."));
   });
 
-  // L'écran est prêt avant de lancer l'enregistrement.
   renderAt(0);
   recorder.start(250);
 
-  // Tous les sons utilisent exactement la même origine temporelle.
   const audioStart=audioContext.currentTime+0.35;
 
   audioEvents.forEach(event=>{
@@ -612,10 +639,6 @@ async function generate(){
    sources.push(source);
   });
 
-  status("Enregistrement en cours...");
-
-  // Horloge unique : AudioContext.currentTime.
-  // Les images ne changent jamais sur un second chronomètre.
   await new Promise((resolve,reject)=>{
    function frame(){
     if(audioContext.state==="closed"){
@@ -625,11 +648,10 @@ async function generate(){
 
     const elapsed=audioContext.currentTime-audioStart;
     const currentTime=Math.max(0,elapsed);
-
     renderAt(currentTime);
 
     const percent=Math.min(100,Math.floor(currentTime/totalDuration*100));
-    status("Création de la vidéo : "+percent+" %");
+    status("Enregistrement : "+percent+" %");
 
     if(currentTime>=totalDuration){
      renderAt(totalDuration);
@@ -644,45 +666,119 @@ async function generate(){
   });
 
   cancelAnimationFrame(raf);
-
   await wait(150);
   recorder.stop();
   await recordingFinished;
 
-  const blob=new Blob(chunks,{type:mimeType});
-  const extension=mimeType.includes("mp4")?"mp4":"webm";
-  const url=URL.createObjectURL(blob);
+  return new Blob(chunks,{type:mimeType});
 
-  const link=document.createElement("a");
-  link.href=url;
-  link.download="quizzzz123_"+Date.now()+"."+extension;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+ }finally{
+  if(raf)cancelAnimationFrame(raf);
 
-  status("Vidéo terminée ! Format : "+extension.toUpperCase()+". Vérifie tes téléchargements.");
-
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
-
- }catch(error){
   if(recorder&&recorder.state!=="inactive"){
    try{recorder.stop()}catch(e){}
   }
-  status("Erreur : "+error.message);
- }finally{
-  if(raf)cancelAnimationFrame(raf);
+
   sources.forEach(source=>{try{source.stop()}catch(e){}});
   if(stream)stream.getTracks().forEach(track=>track.stop());
   if(videoStream)videoStream.getTracks().forEach(track=>track.stop());
+
   if(audioContext&&audioContext.state!=="closed"){
    await audioContext.close();
   }
-
-  busy=false;
-  $("generate").disabled=false;
-  $("newQuiz").disabled=false;
-  $("previewBtn").disabled=false;
  }
+}
+
+function downloadBlob(blob,filename){
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+ link.href=url;
+ link.download=filename;
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),120000);
+}
+
+async function generateSingle(){
+ if(busy)return;
+ busy=true;
+ setButtons(true);
+
+ try{
+  if(!quiz.length)chooseQuiz();
+  if(animation){cancelAnimationFrame(animation);animation=null;}
+
+  const blob=await recordOneVideo();
+  const extension=blob.type.includes("mp4")?"mp4":"webm";
+  downloadBlob(blob,"quizzzz123_"+Date.now()+"."+extension);
+  status("Vidéo terminée ! Vérifie tes téléchargements.");
+ }catch(error){
+  status("Erreur : "+error.message);
+ }finally{
+  busy=false;
+  setButtons(false);
+ }
+}
+
+async function generateFive(){
+ if(busy)return;
+
+ if(typeof JSZip==="undefined"){
+  status("Impossible de charger le système ZIP. Vérifie ta connexion puis recharge la page.");
+  return;
+ }
+
+ busy=true;
+ setButtons(true);
+
+ try{
+  if(animation){cancelAnimationFrame(animation);animation=null;}
+
+  const zip=new JSZip();
+  let extension="webm";
+
+  for(let i=0;i<5;i++){
+   status("Préparation de la vidéo "+(i+1)+"/5...");
+
+   // Un nouveau quiz indépendant pour chaque vidéo.
+   chooseQuiz();
+
+   const blob=await recordOneVideo();
+   extension=blob.type.includes("mp4")?"mp4":"webm";
+
+   zip.file(
+    "quizzzz123_video_"+(i+1)+"."+extension,
+    blob
+   );
+
+   status("Vidéo "+(i+1)+"/5 terminée !\nPréparation de la suite...");
+  }
+
+  status("Création du fichier ZIP...");
+  const zipBlob=await zip.generateAsync({
+   type:"blob",
+   compression:"DEFLATE",
+   compressionOptions:{level:3}
+  },metadata=>{
+   status("Création du ZIP : "+Math.floor(metadata.percent)+" %");
+  });
+
+  downloadBlob(zipBlob,"quizzzz123_5_videos.zip");
+  status("Terminé ! Ton ZIP contient les 5 vidéos séparées.");
+ }catch(error){
+  status("Erreur : "+error.message+"\nLes vidéos déjà créées n'ont pas forcément été téléchargées.");
+ }finally{
+  busy=false;
+  setButtons(false);
+ }
+}
+
+function setButtons(disabled){
+ $("generate").disabled=disabled;
+ $("generateFive").disabled=disabled;
+ $("newQuiz").disabled=disabled;
+ $("previewBtn").disabled=disabled;
 }
 
 $("newQuiz").onclick=()=>{
@@ -715,14 +811,23 @@ $("previewBtn").onclick=async()=>{
     drawIntro();
    }else{
     const elapsed=t-2.5;
-    const index=Math.floor(elapsed/8);
+    let index=0;
+    let local=elapsed;
+
+    // Aperçu visuel simplifié : 5 s de réflexion par question.
+    while(index<5){
+     const questionDuration=ANSWER_SECONDS+3;
+     if(local<questionDuration)break;
+     local-=questionDuration;
+     index++;
+    }
 
     if(index>=5){
      drawEnd();
+    }else if(local<ANSWER_SECONDS){
+     drawQuestion(index,"thinking",ANSWER_SECONDS-local);
     }else{
-     const local=elapsed-index*8;
-     if(local<6)drawQuestion(index,"thinking",6-local);
-     else drawQuestion(index,"reveal",0);
+     drawQuestion(index,"reveal",0);
     }
    }
 
@@ -736,7 +841,8 @@ $("previewBtn").onclick=async()=>{
  }
 };
 
-$("generate").onclick=generate;
+$("generate").onclick=generateSingle;
+$("generateFive").onclick=generateFive;
 
 chooseQuiz();
 drawIntro();
