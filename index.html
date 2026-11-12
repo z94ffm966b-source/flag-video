@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
-:root {
+:root{
   color-scheme:dark;
   --bg:#090014;
   --panel:#190733;
@@ -121,7 +121,6 @@ canvas{
 .bank-buttons button{width:100%}
 .file-input{display:none}
 
-/* AJOUT : BARRE DE PROGRESSION */
 .progress-track{
   width:100%;
   height:14px;
@@ -216,12 +215,11 @@ canvas{
   </p>
 </section>
 
-<!-- AJOUT : PROGRESSION DE LA BANQUE -->
 <section class="panel">
   <h2>📊 Progression de la banque</h2>
 
   <div class="progress-infos">
-    <span id="progressCount">0 / 40 questions utilisées</span>
+    <span id="progressCount">0 / 800 questions utilisées</span>
     <strong id="progressPercent">0 %</strong>
   </div>
 
@@ -283,7 +281,6 @@ canvas{
 
 let QUESTIONS = [
 
-/* GÉOGRAPHIE */
 {
 id:"geo01",theme:"Géographie",level:"FACILE",
 question:"Quelle est la capitale de l'Australie ?",
@@ -320,7 +317,6 @@ options:["Auckland","Christchurch","Wellington","Hamilton"],
 image:"Wellington New Zealand skyline",emoji:"🌏"
 },
 
-/* TECHNOLOGIE */
 {
 id:"tech01",theme:"Technologie",level:"FACILE",
 question:"Quel appareil permet généralement de distribuer le Wi-Fi à la maison ?",
@@ -357,7 +353,6 @@ options:["Le SSD","Le processeur audio","Le GPU","La mémoire ROM"],
 image:"Graphics card GPU",emoji:"🖥️"
 },
 
-/* CULTURE GÉNÉRALE */
 {
 id:"cult01",theme:"Culture générale",level:"FACILE",
 question:"Combien de côtés possède un hexagone ?",
@@ -394,7 +389,6 @@ options:["L'argent","L'argon","L'or","L'aluminium"],
 image:"Gold nuggets metal",emoji:"🥇"
 },
 
-/* HISTOIRE */
 {
 id:"hist01",theme:"Histoire",level:"FACILE",
 question:"En quelle année débute la Révolution française ?",
@@ -431,7 +425,6 @@ options:["Le traité de Rome","Le traité de Versailles","Le traité de Maastric
 image:"Treaty of Versailles 1919",emoji:"📜"
 },
 
-/* SCIENCES */
 {
 id:"sci01",theme:"Sciences",level:"FACILE",
 question:"Quelle planète est surnommée la planète rouge ?",
@@ -468,7 +461,6 @@ options:["Le proton","Le neutron","L'électron","Le photon"],
 image:"Electron atom scientific illustration",emoji:"⚛️"
 },
 
-/* SPORT */
 {
 id:"sport01",theme:"Sport",level:"FACILE",
 question:"Combien de joueurs une équipe de football aligne-t-elle au début d'un match ?",
@@ -505,7 +497,6 @@ options:["Le tir à l'arc","L'escrime","Le pentathlon moderne","La gymnastique"]
 image:"Fencing foil sword sport",emoji:"🤺"
 },
 
-/* CINÉMA ET SÉRIES */
 {
 id:"film01",theme:"Cinéma et séries",level:"FACILE",
 question:"Quel personnage vit dans un ananas au fond de la mer ?",
@@ -542,7 +533,6 @@ options:["Steven Spielberg","James Cameron","Christopher Nolan","Denis Villeneuv
 image:"Inception movie city bending",emoji:"🎥"
 },
 
-/* ANIMAUX */
 {
 id:"ani01",theme:"Animaux",level:"FACILE",
 question:"Quel est le plus grand animal vivant sur Terre ?",
@@ -598,11 +588,8 @@ let currentQuiz=[];
 let previewTimer=null;
 let usedHistory=[];
 let imageCache={};
-
-/* Source de la banque actuellement chargée */
 let bankSource="secours";
 
-/* Historique */
 try{
   const savedHistory=JSON.parse(localStorage.getItem("quiz_history")||"[]");
   if(Array.isArray(savedHistory))usedHistory=savedHistory;
@@ -610,7 +597,6 @@ try{
   usedHistory=[];
 }
 
-/* Voix originales conservées */
 const voices={
   female:"ff_siwis",
   male:"ff_alex"
@@ -636,26 +622,26 @@ function escapeHTML(str){
 }
 
 /* =====================================================
-   NOUVEAU : COMPTEUR ET BARRE DE PROGRESSION
+   PROGRESSION PAR THÈME
 ===================================================== */
 
 function updateProgress(){
 
-  /*
-    On ne compte que les identifiants présents dans
-    la banque actuellement chargée.
+  const selectedTheme=$("theme").value;
 
-    Si la banque passe de 40 à 40 000 questions,
-    le pourcentage est recalculé automatiquement.
-  */
+  // On prend toute la banque du thème sélectionné
+  const pool=QUESTIONS.filter(q=>
+    selectedTheme==="TOUS" || q.theme===selectedTheme
+  );
 
-  const currentIds=new Set(QUESTIONS.map(q=>q.id));
+  const currentIds=new Set(pool.map(q=>q.id));
 
+  // On compte uniquement les questions de ce thème
   const usedIds=new Set(
     usedHistory.filter(id=>currentIds.has(id))
   );
 
-  const total=QUESTIONS.length;
+  const total=pool.length;
   const used=usedIds.size;
 
   const percentage=total
@@ -669,12 +655,12 @@ function updateProgress(){
   $("progressPercent").textContent=percentage+" %";
   $("progressFill").style.width=percentage+"%";
 
-  if(used>=total){
+  if(used>=total && total>0){
     $("progressMessage").textContent=
-      "Toutes les questions ont été utilisées. Le cycle recommence avec la banque complète.";
+      "Toutes les questions de ce thème ont été utilisées. Le cycle recommence.";
   }else{
     $("progressMessage").textContent=
-      "Les questions jamais utilisées sont prioritaires. Les anciennes reviennent uniquement lorsque nécessaire.";
+      "Les questions jamais utilisées de ce thème sont prioritaires.";
   }
 }
 
@@ -724,21 +710,17 @@ function validateQuestion(q){
   if(typeof q.answer!=="string"||!q.answer.trim())
     throw new Error("Réponse manquante : "+q.id);
 
-  if(!Array.isArray(q.options)||q.options.length!==4){
+  if(!Array.isArray(q.options)||q.options.length!==4)
     throw new Error("Une question ne possède pas exactement 4 propositions : "+q.id);
-  }
 
-  if(!q.options.every(o=>typeof o==="string"&&o.trim())){
+  if(!q.options.every(o=>typeof o==="string"&&o.trim()))
     throw new Error("Une proposition est invalide : "+q.id);
-  }
 
-  if(!q.options.includes(q.answer)){
+  if(!q.options.includes(q.answer))
     throw new Error("La bonne réponse manque dans les propositions : "+q.id);
-  }
 
-  if(new Set(q.options).size!==4){
+  if(new Set(q.options).size!==4)
     throw new Error("Une question contient des propositions en double : "+q.id);
-  }
 
   if(typeof q.image!=="string")
     throw new Error("Image manquante : "+q.id);
@@ -751,18 +733,16 @@ function validateQuestion(q){
 
 function validateBank(bank){
 
-  if(!Array.isArray(bank)||bank.length<5){
+  if(!Array.isArray(bank)||bank.length<5)
     throw new Error("La banque doit contenir au moins 5 questions.");
-  }
 
   const ids=new Set();
 
   bank.forEach(q=>{
     validateQuestion(q);
 
-    if(ids.has(q.id)){
+    if(ids.has(q.id))
       throw new Error("Identifiant en double : "+q.id);
-    }
 
     ids.add(q.id);
   });
@@ -771,22 +751,15 @@ function validateBank(bank){
 }
 
 /* =====================================================
-   NOUVEAU : CHARGEMENT AUTOMATIQUE DU JSON GITHUB
+   CHARGEMENT AUTOMATIQUE DU JSON GITHUB
 ===================================================== */
 
 async function loadRemoteBank(){
 
   try{
 
-    $("bankStatus").textContent=
-      "Chargement de la banque distante...";
-
+    $("bankStatus").textContent="Chargement de la banque distante...";
     setStatus("Chargement de la banque de questions depuis GitHub...");
-
-    /*
-      Le fichier doit être placé à la racine du dépôt,
-      au même niveau que index.html.
-    */
 
     const response=await fetch(
       "./banque_questions.json?v="+Date.now(),
@@ -794,24 +767,14 @@ async function loadRemoteBank(){
     );
 
     if(!response.ok){
-      throw new Error(
-        "Fichier banque_questions.json introuvable (HTTP "+response.status+")."
-      );
+      throw new Error("Fichier banque_questions.json introuvable (HTTP "+response.status+").");
     }
 
     const data=await response.json();
 
-    const bank=Array.isArray(data)
-      ? data
-      : data.questions;
+    const bank=Array.isArray(data)?data:data.questions;
 
     validateBank(bank);
-
-    /*
-      On conserve les anciens identifiants de l'historique.
-      Les questions ajoutées dans la nouvelle banque
-      seront donc considérées comme jamais utilisées.
-    */
 
     QUESTIONS=bank.map(q=>({
       id:q.id,
@@ -825,7 +788,6 @@ async function loadRemoteBank(){
     }));
 
     bankSource="GitHub";
-
     currentQuiz=[];
     imageCache={};
 
@@ -884,16 +846,8 @@ function chooseQuiz(){
   let selected;
 
   if(unused.length>=5){
-
     selected=shuffle(unused).slice(0,5);
-
   }else{
-
-    /*
-      On utilise d'abord toutes les questions encore inédites,
-      puis on complète avec les anciennes si nécessaire.
-    */
-
     selected=[
       ...shuffle(unused),
       ...shuffle(alreadyUsed)
@@ -934,7 +888,6 @@ function wrapText(text,x,y,maxWidth,lineHeight,maxLines=3){
   let lines=[];
 
   for(const word of words){
-
     const test=line?line+" "+word:word;
 
     if(ctx.measureText(test).width>maxWidth&&line){
@@ -946,7 +899,6 @@ function wrapText(text,x,y,maxWidth,lineHeight,maxLines=3){
   }
 
   if(line)lines.push(line);
-
   lines=lines.slice(0,maxLines);
 
   lines.forEach((l,i)=>{
@@ -980,7 +932,6 @@ function background(){
 }
 
 function drawBrand(){
-
   ctx.textAlign="center";
   ctx.fillStyle="#e9c6ff";
   ctx.font="bold 42px Arial";
@@ -1037,7 +988,6 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
     ctx.restore();
 
   }else{
-
     ctx.font="150px Arial";
     ctx.fillText(q.emoji||"❓",W/2,580);
   }
@@ -1076,13 +1026,10 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
   });
 
   if(answerVisible){
-
     ctx.fillStyle="#70ffb0";
     ctx.font="bold 45px Arial";
     ctx.fillText("LA BONNE RÉPONSE !",W/2,1660);
-
   }else{
-
     ctx.fillStyle="#fff";
     ctx.font="bold 75px Arial";
     ctx.fillText(Math.max(0,timeLeft),W/2,1660);
@@ -1146,11 +1093,9 @@ async function loadQuestionImage(q){
     });
 
     imageCache[q.id]=img;
-
     return img;
 
   }catch(e){
-
     console.warn("Image indisponible pour",q.id,e);
     return null;
   }
@@ -1167,12 +1112,6 @@ async function loadImages(quiz){
 async function getVoice(){
 
   const gender=$("voice").value;
-
-  /*
-    Voix féminine fixée sur ff_siwis :
-    évite de sélectionner au hasard une voix française
-    qui pourrait avoir un accent différent.
-  */
 
   if(gender==="female")return "ff_siwis";
 
@@ -1289,11 +1228,6 @@ async function prepareAudio(quiz,introText,voice){
       duration:THINK_SECONDS
     });
 
-    /*
-      La réponse reste affichée au moins 2 secondes.
-      Il n'y a plus de segment pause avec écran vide.
-    */
-
     segments.push({
       type:"answer",
       index:i,
@@ -1379,7 +1313,6 @@ async function renderVideo(quiz,videoNumber=1){
         });
 
       }else{
-
         decoded.push(segment);
       }
     }
@@ -1454,11 +1387,6 @@ async function renderVideo(quiz,videoNumber=1){
       }
     }
 
-    /*
-      La vidéo s'arrête exactement à la fin du dernier segment.
-      Aucun délai supplémentaire de 0,5 seconde.
-    */
-
     const totalDuration=cursor;
 
     canvasStream=canvas.captureStream(30);
@@ -1472,14 +1400,11 @@ async function renderVideo(quiz,videoNumber=1){
     let recorder;
 
     try{
-
       recorder=new MediaRecorder(stream,{
         mimeType,
         videoBitsPerSecond:5000000
       });
-
     }catch(error){
-
       throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
     }
 
@@ -1515,11 +1440,6 @@ async function renderVideo(quiz,videoNumber=1){
       }
     }
 
-    /*
-      Prépare l'écran d'introduction pendant le court
-      démarrage technique de l'enregistrement.
-    */
-
     drawIntro(introText);
     recorder.start(250);
 
@@ -1528,32 +1448,20 @@ async function renderVideo(quiz,videoNumber=1){
       const elapsed=audioContext.currentTime-startTime;
 
       if(elapsed>=totalDuration){
-
         if(recorder.state!=="inactive")recorder.stop();
-
         return;
       }
 
-      /*
-        Avant le début de la timeline, on garde l'intro.
-        Les segments sont continus : pas d'écran vide
-        entre la réponse et la prochaine question.
-      */
-
       if(elapsed<0){
-
         drawIntro(introText);
         requestAnimationFrame(drawFrame);
-
         return;
       }
 
       const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
 
       if(!segment){
-
         if(recorder.state!=="inactive")recorder.stop();
-
         return;
       }
 
@@ -1564,7 +1472,6 @@ async function renderVideo(quiz,videoNumber=1){
       }else if(segment.type==="question"){
 
         const q=quiz[segment.index];
-
         drawQuestion(q,segment.index,quiz.length,4,false);
 
       }else if(segment.type==="think"){
@@ -1577,7 +1484,6 @@ async function renderVideo(quiz,videoNumber=1){
       }else if(segment.type==="answer"){
 
         const q=quiz[segment.index];
-
         drawQuestion(q,segment.index,quiz.length,0,true);
 
       }else if(segment.type==="end"){
@@ -1659,10 +1565,8 @@ async function preview(){
     const isAnswer=step%2===0;
 
     if(questionIndex>=currentQuiz.length){
-
       drawEnd();
       stopPreview();
-
       return;
     }
 
@@ -1691,7 +1595,6 @@ async function preview(){
   }
 
   draw();
-
   previewTimer=setInterval(draw,100);
 }
 
@@ -1843,7 +1746,6 @@ function exportBank(){
       "Export réussi : "+QUESTIONS.length+" questions enregistrées.";
 
   }catch(error){
-
     $("bankStatus").textContent="Erreur d'export : "+error.message;
   }
 }
@@ -1883,13 +1785,6 @@ async function importBank(file){
       emoji:q.emoji
     }));
 
-    /*
-      On conserve la sauvegarde locale pour les banques
-      de taille raisonnable. Si le navigateur refuse
-      le stockage (quota dépassé), la banque reste
-      quand même chargée pour la session actuelle.
-    */
-
     try{
 
       localStorage.setItem(
@@ -1909,7 +1804,6 @@ async function importBank(file){
     }
 
     bankSource="import";
-
     currentQuiz=[];
     imageCache={};
 
@@ -1929,7 +1823,6 @@ async function importBank(file){
       "Import impossible : "+error.message;
 
   }finally{
-
     $("importBankFile").value="";
   }
 }
@@ -1938,6 +1831,9 @@ async function importBank(file){
    BOUTONS ET INITIALISATION
 ===================================================== */
 
+// Actualisation automatique quand le thème change
+$("theme").addEventListener("change",updateProgress);
+
 $("newQuiz").addEventListener("click",()=>{
 
   stopPreview();
@@ -1945,9 +1841,7 @@ $("newQuiz").addEventListener("click",()=>{
   currentQuiz=chooseQuiz();
 
   if(currentQuiz.length){
-
     drawQuestion(currentQuiz[0],0,5,4,false);
-
     setStatus("Nouveau quiz créé : 5 questions prêtes !");
   }
 });
@@ -1994,14 +1888,9 @@ $("bankStatus").textContent=
 
 drawIntro("Teste tes connaissances !");
 
-/*
-  On lance le chargement distant après l'affichage
-  initial pour que le site reste utilisable même
-  si le fichier JSON n'existe pas encore.
-*/
-
 loadRemoteBank();
 
 </script>
 </body>
 </html>
+
