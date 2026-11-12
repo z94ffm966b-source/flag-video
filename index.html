@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080014">
-<title>quizzzz123_ — Quiz Factory</title>
+<title>quizzzz123_ — Ultimate Flag Quiz</title>
 <style>
 *{box-sizing:border-box}
 body{
@@ -47,7 +47,6 @@ button:disabled{opacity:.45}
 canvas{width:100%;height:100%;display:block}
 .hint{font-size:13px;color:#c3add5;line-height:1.6}
 .status{font-size:13px;color:#e8caff;line-height:1.6;margin-top:14px;white-space:pre-wrap}
-audio{width:100%;margin-top:12px}
 </style>
 </head>
 <body>
@@ -73,7 +72,7 @@ audio{width:100%;margin-top:12px}
 <option value="hard">Plutôt difficile</option>
 </select>
 
-<label>Voix</label>
+<label>Voix française</label>
 <select id="voice">
 <option value="female">Voix féminine</option>
 <option value="male">Voix masculine</option>
@@ -83,7 +82,6 @@ audio{width:100%;margin-top:12px}
 <button id="previewBtn" class="secondary">▶ Aperçu animé</button>
 <button id="generate">🎬 Générer ma vidéo</button>
 <div class="status" id="status">Prêt à créer ton quiz !</div>
-<audio id="audioPreview" controls hidden></audio>
 </section>
 
 <section class="panel">
@@ -92,7 +90,7 @@ audio{width:100%;margin-top:12px}
 <canvas id="screen" width="1080" height="1920"></canvas>
 </div>
 <p class="hint" style="text-align:center">
-Format vertical 9:16. Les réponses et le contenu principal sont placés dans une zone de sécurité, à l'écart des boutons TikTok.
+Format vertical 9:16. Réponses placées à gauche pour laisser de la place aux boutons TikTok à droite.
 </p>
 </section>
 </main>
@@ -122,11 +120,13 @@ const countries=[
 const $=id=>document.getElementById(id);
 const canvas=$("screen");
 const ctx=canvas.getContext("2d");
+
 let quiz=[];
 let images={};
 let animation=null;
 let busy=false;
 let timeline=[];
+let audioEvents=[];
 let totalDuration=0;
 
 function shuffle(a){
@@ -191,7 +191,6 @@ function background(){
  ctx.fillStyle=g;
  ctx.fillRect(0,0,1080,1920);
 
- // Lumières décoratives
  let glow=ctx.createRadialGradient(300,300,20,300,300,600);
  glow.addColorStop(0,"#a43cff44");
  glow.addColorStop(1,"#a43cff00");
@@ -216,6 +215,11 @@ function text(txt,x,y,size,color,weight="bold"){
  ctx.fillText(txt,x,y);
 }
 
+function drawHeader(){
+ text("quizzzz123_",440,150,64,"#ff8bdf");
+ roundRect(145,220,590,5,3,"#ffffff22");
+}
+
 function drawFlag(code,x,y,w,h){
  let img=images[code];
  if(!img)return;
@@ -229,11 +233,6 @@ function drawFlag(code,x,y,w,h){
  ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih);
 }
 
-function drawHeader(){
- text("quizzzz123_",440,150,64,"#ff8bdf");
- roundRect(145,220,590,5,3,"#ffffff22");
-}
-
 function drawIntro(){
  background();
  drawHeader();
@@ -242,35 +241,43 @@ function drawIntro(){
  text($("intro").value,440,930,36,"#edcaff");
  roundRect(145,1080,590,100,28,"#32164e","#a34cff");
  text("5 DRAPEAUX  •  5 DÉFIS",440,1130,30,"#ff8bdf");
- text("RÉUSSIRAS-TU LE SANS-FAUTE ?",440,1300,25,"#d6b4f3");
+ text("À TOI DE JOUER !",440,1300,30,"#d6b4f3");
 }
 
-function drawQuestion(index,local,reveal){
+function drawQuestion(index,phase,remaining){
  background();
  drawHeader();
 
- // Barre de progression
  roundRect(130,270,620,13,8,"#ffffff25");
  roundRect(130,270,620*((index+1)/5),13,8,"#ed5bc9");
 
  text("QUESTION "+(index+1)+" / 5",440,365,34,"#e9c9ff");
- text(reveal?"RÉPONSE":"QUEL EST CE PAYS ?",440,465,43,"white");
+
+ if(phase==="reveal"){
+  text("BONNE RÉPONSE !",440,465,43,"#ff9be1");
+ }else if(phase==="thinking"){
+  text("QUEL EST CE PAYS ?",440,465,43,"white");
+ }else{
+  text("ÉCOUTE LA QUESTION",440,465,39,"#ffb4e9");
+ }
 
  let q=quiz[index];
  drawFlag(q.country[0],235,565,410,255);
 
- // Grille 2 x 2, à gauche de la zone des boutons TikTok
  let positions=[
   [115,980],[450,980],
   [115,1200],[450,1200]
  ];
+
  q.options.forEach((option,i)=>{
   let [x,y]=positions[i];
   let correct=option[0]===q.country[0];
-  let color=reveal&&correct?"#147a48":"#29163e";
-  let stroke=reveal&&correct?"#55f0a0":"#68428a";
+  let color=phase==="reveal"&&correct?"#147a48":"#29163e";
+  let stroke=phase==="reveal"&&correct?"#55f0a0":"#68428a";
+
   roundRect(x,y,300,180,24,color,stroke);
   text(String(i+1),x+150,y+47,32,"#ff8bdd");
+
   ctx.font="bold 25px Arial";
   ctx.fillStyle="white";
   ctx.textAlign="center";
@@ -278,59 +285,71 @@ function drawQuestion(index,local,reveal){
   ctx.fillText(option[1],x+150,y+115,260);
  });
 
- if(reveal){
+ if(phase==="reveal"){
   roundRect(125,1460,630,100,25,"#421b58","#f17bda");
   text("✓ "+q.country[1].toUpperCase(),440,1510,35,"white");
- }else{
-  let remaining=Math.max(0,Math.ceil(6-local));
+ }else if(phase==="thinking"){
+  let value=Math.max(0,remaining);
   ctx.beginPath();
-  ctx.arc(440,1600,58,-Math.PI/2,-Math.PI/2+Math.PI*2*(remaining/6));
+  ctx.arc(440,1600,58,-Math.PI/2,-Math.PI/2+Math.PI*2*(value/6));
   ctx.strokeStyle="#ff70d7";
   ctx.lineWidth=12;
   ctx.stroke();
-  text(String(remaining),440,1600,55,"white");
+  text(String(Math.ceil(value)),440,1600,55,"white");
  }
 }
 
 function drawEnd(){
  background();
  drawHeader();
- text("🏆",440,600,120,"#ff8bdc");
- text("ALORS ?",440,800,65,"white");
- text("TON SCORE SUR 5",440,900,38,"#e6caff");
- text("?",440,1100,150,"#ff75d9");
- roundRect(120,1300,640,110,26,"#39164e","#a54cff");
- text("DIS TON SCORE EN COMMENTAIRE",440,1355,27,"white");
+ text("🏆",440,580,120,"#ff8bdc");
+ text("ALORS ?",440,770,65,"white");
+ text("TON SCORE SUR 5 ?",440,900,48,"#ffb5e9");
+ roundRect(120,1080,640,125,28,"#39164e","#a54cff");
+ text("ABONNE-TOI !",440,1142,48,"white");
+ text("POUR D'AUTRES QUIZ",440,1260,31,"#e6caff");
+ text("quizzzz123_",440,1430,34,"#ff8bdf");
 }
 
 function drawAt(t){
- if(timeline.length===0){drawIntro();return}
- if(t<timeline[0].start){drawIntro();return}
  let scene=timeline.find(s=>t>=s.start&&t<s.end);
- if(!scene){drawEnd();return}
- if(scene.type==="question"){
-  drawQuestion(scene.index,t-scene.start,false);
- }else if(scene.type==="reveal"){
-  drawQuestion(scene.index,6,true);
- }else if(scene.type==="intro"){
+ if(!scene){
+  if(t<0)drawIntro();
+  else drawEnd();
+  return;
+ }
+
+ if(scene.type==="intro"){
   drawIntro();
- }else{
+ }else if(scene.type==="questionIntro"){
+  drawQuestion(scene.index,"intro",0);
+ }else if(scene.type==="thinking"){
+  let elapsed=t-scene.start;
+  drawQuestion(scene.index,"thinking",Math.max(0,6-elapsed));
+ }else if(scene.type==="reveal"){
+  drawQuestion(scene.index,"reveal",0);
+ }else if(scene.type==="end"){
   drawEnd();
  }
 }
 
-// API vocale : génération de chaque phrase séparément
+// Génération de la voix française
 async function getVoice(){
  const response=await fetch("https://api.tts.ai/v1/voices/?language=fr");
  if(!response.ok)throw Error("Impossible de récupérer les voix françaises.");
+
  const data=await response.json();
  const voices=data.voices||[];
  const wanted=$("voice").value;
+
  let selected=voices.find(v=>
   (wanted==="female"?v.gender==="female":v.gender==="male") &&
   (v.language||"").toLowerCase().startsWith("fr")
  );
- if(!selected)selected=voices.find(v=>(v.language||"").toLowerCase().startsWith("fr"));
+
+ if(!selected)
+  selected=voices.find(v=>(v.language||"").toLowerCase().startsWith("fr"));
+
  if(!selected)throw Error("Aucune voix française disponible.");
  return selected.id;
 }
@@ -348,16 +367,24 @@ async function speech(textValue,voice){
    speed:1
   })
  });
+
  if(!response.ok)throw Error("Erreur du service vocal : "+response.status);
+
  const job=await response.json();
  if(!job.uuid)throw Error("Réponse vocale invalide.");
 
  for(let i=0;i<90;i++){
   await wait(2000);
-  const check=await fetch("https://api.tts.ai/v1/speech/results/?uuid="+encodeURIComponent(job.uuid));
+  const check=await fetch(
+   "https://api.tts.ai/v1/speech/results/?uuid="+encodeURIComponent(job.uuid)
+  );
+
   if(!check.ok)continue;
   const result=await check.json();
-  if(result.status==="failed")throw Error("La voix n'a pas pu être générée.");
+
+  if(result.status==="failed")
+   throw Error("La voix n'a pas pu être générée.");
+
   if(result.status==="completed"&&result.result_url){
    const audioResponse=await fetch(result.result_url);
    if(!audioResponse.ok)throw Error("Impossible de télécharger la voix.");
@@ -370,31 +397,39 @@ async function speech(textValue,voice){
 async function makeAudioTimeline(audioContext){
  const voice=await getVoice();
  const segments=[];
- const intro=$("intro").value;
 
- status("Création de la voix d'introduction...");
+ status("Création de l'introduction...");
  segments.push({
   type:"intro",
-  buffer:await audioContext.decodeAudioData(await speech(intro,voice))
+  buffer:await audioContext.decodeAudioData(
+   await speech($("intro").value,voice)
+  )
  });
 
  for(let i=0;i<quiz.length;i++){
-  status("Création de la voix : question "+(i+1)+"/5...");
-  let question=await speech("Drapeau numéro "+(i+1)+". Quel est ce pays ?",voice);
-  let answer=await speech("La bonne réponse est "+quiz[i].country[1]+".",voice);
+  status("Création des voix : question "+(i+1)+"/5...");
+
+  const questionBuffer=await audioContext.decodeAudioData(
+   await speech("Drapeau numéro "+(i+1)+". Quel est ce pays ?",voice)
+  );
+
+  const answerBuffer=await audioContext.decodeAudioData(
+   await speech("La bonne réponse est "+quiz[i].country[1]+".",voice)
+  );
+
   segments.push({
    type:"question",
    index:i,
-   buffer:await audioContext.decodeAudioData(question),
-   answer:await audioContext.decodeAudioData(answer)
+   question:questionBuffer,
+   answer:answerBuffer
   });
  }
 
- status("Création de la conclusion...");
+ status("Création de la phrase finale...");
  segments.push({
   type:"outro",
   buffer:await audioContext.decodeAudioData(
-   await speech("Tu as fait combien sur cinq ? Dis-le en commentaire !",voice)
+   await speech("Alors, donne ton score sur cinq et abonne-toi pour d'autres quiz !",voice)
   )
  });
 
@@ -403,41 +438,82 @@ async function makeAudioTimeline(audioContext){
 
 function makeTimeline(segments){
  timeline=[];
+ audioEvents=[];
  let cursor=0;
- let audioEvents=[];
 
- function addBuffer(buffer,type,index){
-  let start=cursor;
-  let end=start+buffer.duration;
-  timeline.push({type,index,start,end});
-  audioEvents.push({buffer,start});
-  cursor=end;
+ function addAudio(buffer){
+  audioEvents.push({buffer,start:cursor});
+  cursor+=buffer.duration;
  }
 
- addBuffer(segments[0].buffer,"intro",-1);
- cursor+=1;
+ // Introduction
+ timeline.push({
+  type:"intro",
+  start:0,
+  end:segments[0].buffer.duration
+ });
+ addAudio(segments[0].buffer);
+ cursor+=0.5;
 
+ // Les cinq questions
  for(let i=1;i<=5;i++){
-  let s=segments[i];
-  addBuffer(s.buffer,"question",s.index);
-  let questionEnd=cursor;
-  // Six secondes de réflexion après la question parlée
-  timeline.push({type:"question",index:s.index,start:questionEnd,end:questionEnd+6});
+  const s=segments[i];
+
+  // Question parlée
+  let questionStart=cursor;
+  addAudio(s.question);
+
+  timeline.push({
+   type:"questionIntro",
+   index:s.index,
+   start:questionStart,
+   end:cursor
+  });
+
+  // Six secondes complètes après la question parlée
+  let thinkingStart=cursor;
+  timeline.push({
+   type:"thinking",
+   index:s.index,
+   start:thinkingStart,
+   end:thinkingStart+6
+  });
   cursor+=6;
-  addBuffer(s.answer,"reveal",s.index);
-  cursor+=1;
+
+  // Révélation et annonce synchronisées
+  let revealStart=cursor;
+  addAudio(s.answer);
+
+  timeline.push({
+   type:"reveal",
+   index:s.index,
+   start:revealStart,
+   end:cursor
+  });
+
+  cursor+=0.6;
  }
- addBuffer(segments[6].buffer,"outro",-1);
- timeline.push({type:"end",start:cursor,end:cursor+2});
- cursor+=2;
- totalDuration=cursor;
- return audioEvents;
+
+ // Phrase finale, une seule fois, après le cinquième pays
+ const outro=segments[6].buffer;
+ const outroStart=cursor;
+ addAudio(outro);
+
+ timeline.push({
+  type:"end",
+  start:outroStart,
+  end:cursor+2
+ });
+
+ totalDuration=cursor+2;
 }
 
 async function generate(){
  if(busy)return;
+
  busy=true;
  $("generate").disabled=true;
+
  let audioContext=null;
  let stream=null;
  let videoStream=null;
@@ -454,21 +530,12 @@ async function generate(){
   await audioContext.resume();
 
   const segments=await makeAudioTimeline(audioContext);
-  const events=makeTimeline(segments);
+  makeTimeline(segments);
 
   if(!canvas.captureStream||!window.MediaRecorder)
    throw Error("L'export vidéo n'est pas compatible avec ce navigateur. Essaie Chrome sur ordinateur.");
 
   const destination=audioContext.createMediaStreamDestination();
-  const startAt=audioContext.currentTime+0.5;
-
-  events.forEach(event=>{
-   let source=audioContext.createBufferSource();
-   source.buffer=event.buffer;
-   source.connect(destination);
-   source.start(startAt+event.start);
-   sources.push(source);
-  });
 
   videoStream=canvas.captureStream(30);
   stream=new MediaStream([
@@ -482,25 +549,41 @@ async function generate(){
    "video/webm;codecs=vp8,opus",
    "video/webm"
   ];
+
   const mime=formats.find(x=>MediaRecorder.isTypeSupported(x));
   if(!mime)throw Error("Format vidéo non compatible.");
 
   const recorder=new MediaRecorder(stream,{mimeType:mime});
   let chunks=[];
-  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+
+  recorder.ondataavailable=e=>{
+   if(e.data.size)chunks.push(e.data);
+  };
 
   const finished=new Promise((resolve,reject)=>{
    recorder.onstop=resolve;
    recorder.onerror=()=>reject(Error("Erreur d'enregistrement."));
   });
 
+  drawAt(0);
   recorder.start();
+
   const started=performance.now();
+  const audioStart=audioContext.currentTime+0.1;
+
+  // Programmation de toutes les phrases sur la même ligne temporelle
+  audioEvents.forEach(event=>{
+   const source=audioContext.createBufferSource();
+   source.buffer=event.buffer;
+   source.connect(destination);
+   source.start(audioStart+event.start);
+   sources.push(source);
+  });
 
   while((performance.now()-started)/1000<totalDuration){
-   let elapsed=(performance.now()-started)/1000;
+   const elapsed=(performance.now()-started)/1000;
    drawAt(elapsed);
-   status("Montage vidéo : "+Math.min(99,Math.floor(elapsed/totalDuration*100))+" %");
+   status("Création de la vidéo : "+Math.min(99,Math.floor(elapsed/totalDuration*100))+" %");
    await wait(33);
   }
 
@@ -511,6 +594,7 @@ async function generate(){
   const blob=new Blob(chunks,{type:mime});
   const ext=mime.includes("mp4")?"mp4":"webm";
   const url=URL.createObjectURL(blob);
+
   const a=document.createElement("a");
   a.href=url;
   a.download="quizzzz123_"+Date.now()+"."+ext;
@@ -518,7 +602,7 @@ async function generate(){
   a.click();
   a.remove();
 
-  status("Vidéo créée ! Vérifie tes téléchargements. Format : "+ext.toUpperCase());
+  status("Vidéo terminée avec la voix intégrée ! Format : "+ext.toUpperCase()+". Vérifie tes téléchargements.");
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 
  }catch(e){
@@ -528,12 +612,14 @@ async function generate(){
   if(stream)stream.getTracks().forEach(t=>t.stop());
   if(videoStream)videoStream.getTracks().forEach(t=>t.stop());
   if(audioContext)await audioContext.close();
+
   busy=false;
   $("generate").disabled=false;
  }
 }
 
 $("newQuiz").onclick=()=>{
+ if(animation)cancelAnimationFrame(animation);
  chooseQuiz();
  drawIntro();
  status("Nouveau quiz créé !");
@@ -542,19 +628,40 @@ $("newQuiz").onclick=()=>{
 $("previewBtn").onclick=async()=>{
  try{
   if(!quiz.length)chooseQuiz();
+  status("Chargement des drapeaux...");
   await loadFlags();
+
   if(animation)cancelAnimationFrame(animation);
-  let start=performance.now();
+
+  // Aperçu visuel : 2,5 secondes d'introduction puis 6 secondes par question.
+  const start=performance.now();
+
   function loop(now){
-   let t=(now-start)/1000;
-   let index=Math.floor(t/8);
-   if(index>=5)drawEnd();
-   else drawQuestion(index,t%8,t%8>=6);
+   const t=(now-start)/1000;
+
+   if(t<2.5){
+    drawIntro();
+   }else{
+    const elapsed=t-2.5;
+    const index=Math.floor(elapsed/8);
+
+    if(index>=5){
+     drawEnd();
+    }else{
+     const local=elapsed-index*8;
+     if(local<6)drawQuestion(index,"thinking",6-local);
+     else drawQuestion(index,"reveal",0);
+    }
+   }
+
    animation=requestAnimationFrame(loop);
   }
+
   animation=requestAnimationFrame(loop);
-  status("Aperçu animé lancé.");
- }catch(e){status("Erreur : "+e.message)}
+  status("Aperçu visuel lancé. La voix est ajoutée lors de la génération.");
+ }catch(e){
+  status("Erreur : "+e.message);
+ }
 };
 
 $("generate").onclick=generate;
