@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -761,7 +762,6 @@ function escapeHTML(str){
 
 function updateProgress(){
 
-  // Progression générale de toute la banque
   const allIds=new Set(QUESTIONS.map(q=>q.id));
 
   const allUsedIds=new Set(
@@ -790,7 +790,6 @@ function updateProgress(){
       "Les questions jamais utilisées sont prioritaires. Les 8 compteurs ci-dessous sont actualisés automatiquement.";
   }
 
-  // Progression indépendante des 8 thèmes
   const list=$("themeProgressList");
   const items=list.querySelectorAll(".theme-progress-item");
 
@@ -1562,7 +1561,8 @@ async function renderVideo(quiz,videoNumber=1){
     try{
       recorder=new MediaRecorder(stream,{
         mimeType,
-        videoBitsPerSecond:5000000
+        videoBitsPerSecond:5000000,
+        audioBitsPerSecond:128000
       });
     }catch(error){
       throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
@@ -1601,7 +1601,9 @@ async function renderVideo(quiz,videoNumber=1){
     }
 
     drawIntro(introText);
-    recorder.start(250);
+
+    // MODIFICATION : enregistrement sans découpage toutes les 250 ms
+    recorder.start();
 
     function drawFrame(){
 
