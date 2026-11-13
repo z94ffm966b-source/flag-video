@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1406,6 +1407,10 @@ async function prepareAudio(quiz,introText,voice){
   return segments;
 }
 
+/* =====================================================
+   COMPATIBILITÉ MP4 — H.264 + AAC
+===================================================== */
+
 function getMP4MimeType(){
 
   if(!window.MediaRecorder){
@@ -1413,28 +1418,32 @@ function getMP4MimeType(){
   }
 
   const candidates=[
-    "video/mp4",
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
-    "video/mp4;codecs=avc1"
+    "video/mp4;codecs=avc1,mp4a.40.2",
+    "video/mp4"
   ];
 
   if(typeof MediaRecorder.isTypeSupported!=="function"){
     return "video/mp4";
   }
 
-  const supported=candidates.find(type=>MediaRecorder.isTypeSupported(type));
+  const supported=candidates.find(type=>
+    MediaRecorder.isTypeSupported(type)
+  );
 
   if(!supported){
     throw new Error(
-      "Ton navigateur ne prend pas en charge l'enregistrement MP4. Essaie avec Safari sur iPhone ou un navigateur compatible MP4."
+      "Ton navigateur ne prend pas en charge l'enregistrement MP4 avec les codecs nécessaires. Essaie avec Safari ou un navigateur compatible."
     );
   }
+
+  console.log("Format MP4 sélectionné :",supported);
 
   return supported;
 }
 
 /* =====================================================
-   RENDU VIDÉO CORRIGÉ
+   RENDU VIDÉO
    Horloge vidéo indépendante de requestAnimationFrame
 ===================================================== */
 
@@ -1443,7 +1452,10 @@ async function renderVideo(quiz,videoNumber=1){
   const mimeType=getMP4MimeType();
 
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-  const audioContext=new AudioContextClass();
+
+  const audioContext=new AudioContextClass({
+    sampleRate:48000
+  });
 
   await audioContext.resume();
 
@@ -1567,12 +1579,14 @@ async function renderVideo(quiz,videoNumber=1){
       recorder=new MediaRecorder(stream,{
         mimeType,
         videoBitsPerSecond:4000000,
-        audioBitsPerSecond:128000
+        audioBitsPerSecond:192000
       });
 
     }catch(error){
 
-      throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
+      throw new Error(
+        "Impossible de démarrer l'enregistrement MP4 sur ce navigateur."
+      );
     }
 
     const chunks=[];
@@ -1594,10 +1608,9 @@ async function renderVideo(quiz,videoNumber=1){
     });
 
     /*
-      Synchronisation audio :
-      On programme le son avec AudioContext.
-      On utilise également une horloge indépendante pour dessiner
-      les images, afin de ne pas dépendre de requestAnimationFrame.
+      Synchronisation audio et vidéo.
+      Le son est programmé avec AudioContext.
+      L'image utilise une horloge indépendante.
     */
 
     const startDelay=0.5;
@@ -1628,7 +1641,7 @@ async function renderVideo(quiz,videoNumber=1){
       const elapsed=(performance.now()-wallStart)/1000;
 
       /*
-        Avant le début du son, on conserve l'introduction.
+        Avant le début du son.
       */
 
       if(elapsed<0){
@@ -1664,7 +1677,7 @@ async function renderVideo(quiz,videoNumber=1){
 
       /*
         Si une petite différence de synchronisation apparaît,
-        on garde une image valide au lieu d'arrêter l'enregistrement.
+        on conserve une image valide.
       */
 
       if(!segment){
@@ -1764,11 +1777,6 @@ async function renderVideo(quiz,videoNumber=1){
 
         drawEnd();
       }
-
-      /*
-        Prochaine image environ 30 fois par seconde.
-        Cette boucle ne dépend plus de requestAnimationFrame.
-      */
 
       frameTimer=setTimeout(drawFrame,33);
     }
