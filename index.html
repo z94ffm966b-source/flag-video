@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -7,20 +6,6 @@
 <meta name="theme-color" content="#090014">
 <title>quizzzz123_ — Créateur de quiz TikTok</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<script type="module">
-try {
-  const { FFmpeg } = await import(
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
-  );
-  window.FFmpegClass = FFmpeg;
-  window.FFmpegImportError = null;
-} catch (error) {
-  console.error("Chargement de FFmpeg impossible :", error);
-  window.FFmpegClass = null;
-  window.FFmpegImportError = error;
-}
-</script>
 
 <style>
 :root{
@@ -265,7 +250,7 @@ canvas{
 
   <p class="small">
     Chaque vidéo contient 5 questions. Temps de réflexion : 4 secondes.
-    Affichage de la réponse : 2 secondes minimum. Format vidéo : MP4.
+    Affichage de la réponse : 2 secondes minimum. Format vidéo : MP4 uniquement.
   </p>
 </section>
 
@@ -1420,7 +1405,7 @@ async function prepareAudio(quiz,introText,voice){
 }
 
 /* =====================================================
-   COMPATIBILITÉ AUDIO / MP4 TIKTOK
+   COMPATIBILITÉ MP4 UNIQUEMENT
 ===================================================== */
 
 function getMP4MimeType(){
@@ -1436,7 +1421,9 @@ function getMP4MimeType(){
   ];
 
   if(typeof MediaRecorder.isTypeSupported!=="function"){
-    return "video/mp4";
+    throw new Error(
+      "Impossible de vérifier la compatibilité MP4 de ton navigateur."
+    );
   }
 
   const supported=candidates.find(type=>
@@ -1445,7 +1432,7 @@ function getMP4MimeType(){
 
   if(!supported){
     throw new Error(
-      "Ton navigateur ne prend pas en charge l'enregistrement MP4 avec audio. Essaie avec Safari sur iPhone ou un navigateur compatible MP4."
+      "Ton navigateur ne prend pas en charge l'enregistrement MP4 natif. Aucune conversion ne sera effectuée. Essaie avec Safari sur iPhone ou un navigateur compatible MP4."
     );
   }
 
@@ -1455,204 +1442,30 @@ function getMP4MimeType(){
 }
 
 /* =====================================================
-   CONVERSION AUTOMATIQUE FFMPEG
+   VÉRIFICATION DU FICHIER MP4
 ===================================================== */
 
-let ffmpegInstance=null;
-let ffmpegLoading=null;
-let ffmpegBlobURLs=[];
-
-async function createFFmpegBlobURL(url,mimeType){
-
-  const response=await fetch(url);
-
-  if(!response.ok){
-    throw new Error("Impossible de télécharger un composant FFmpeg.");
-  }
-
-  const data=await response.arrayBuffer();
-
-  const blob=new Blob([data],{type:mimeType});
-  const objectURL=URL.createObjectURL(blob);
-
-  ffmpegBlobURLs.push(objectURL);
-
-  return objectURL;
-}
-
-async function loadFFmpeg(){
-
-  if(ffmpegInstance){
-    return ffmpegInstance;
-  }
-
-  if(ffmpegLoading){
-    return ffmpegLoading;
-  }
-
-  ffmpegLoading=(async()=>{
-
-    setStatus("Téléchargement du moteur FFmpeg... Première utilisation uniquement.");
-
-    if(!window.FFmpegClass){
-      throw new Error(
-        "FFmpeg n'a pas pu être chargé. Vérifie ta connexion puis recharge la page."
-      );
-    }
-
-    const ffmpeg=new window.FFmpegClass();
-
-    const coreBaseURL=
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd";
-
-    const workerBaseURL=
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm";
-
-    const coreURL=await createFFmpegBlobURL(
-      coreBaseURL+"/ffmpeg-core.js",
-      "text/javascript"
-    );
-
-    const wasmURL=await createFFmpegBlobURL(
-      coreBaseURL+"/ffmpeg-core.wasm",
-      "application/wasm"
-    );
-
-    const classWorkerURL=await createFFmpegBlobURL(
-      workerBaseURL+"/worker.js",
-      "text/javascript"
-    );
-
-    await ffmpeg.load({
-      coreURL,
-      wasmURL,
-      classWorkerURL
-    });
-
-    ffmpegInstance=ffmpeg;
-
-    return ffmpeg;
-
-  })();
-
-  try{
-
-    return await ffmpegLoading;
-
-  }catch(error){
-
-    ffmpegLoading=null;
-    ffmpegInstance=null;
-
-    throw error;
-  }
-}
-
-async function convertToTikTokMP4(blob,videoNumber){
-
-  setStatus(
-    "Conversion TikTok de la vidéo "+videoNumber+
-    " : préparation de FFmpeg..."
-  );
-
-  const ffmpeg=await loadFFmpeg();
-
-  const inputExtension=
-    blob.type.includes("webm")?"webm":"mp4";
-
-  const inputName="video_source_"+videoNumber+"."+inputExtension;
-  const outputName="video_tiktok_"+videoNumber+".mp4";
-
-  try{
-
-    setStatus(
-      "Conversion TikTok de la vidéo "+videoNumber+
-      " : encodage H.264 et AAC..."
-    );
-
-    await ffmpeg.writeFile(
-      inputName,
-      new Uint8Array(await blob.arrayBuffer())
-    );
-
-    const exitCode=await ffmpeg.exec([
-
-      "-i",inputName,
-
-      "-c:v","libx264",
-      "-preset","ultrafast",
-      "-crf","23",
-      "-pix_fmt","yuv420p",
-      "-profile:v","main",
-
-      "-c:a","aac",
-      "-profile:a","aac_low",
-      "-b:a","192k",
-      "-ar","48000",
-      "-ac","2",
-
-      "-movflags","+faststart",
-
-      "-y",
-      outputName
-
-    ]);
-
-    if(exitCode!==0){
-      throw new Error("FFmpeg n'a pas réussi à convertir la vidéo.");
-    }
-
-    const output=await ffmpeg.readFile(outputName);
-
-    if(!output||!output.length){
-      throw new Error("La vidéo convertie est vide.");
-    }
-
-    return new Blob(
-      [output],
-      {type:"video/mp4"}
-    );
-
-  }finally{
-
-    try{
-      await ffmpeg.deleteFile(inputName);
-    }catch(e){}
-
-    try{
-      await ffmpeg.deleteFile(outputName);
-    }catch(e){}
-  }
-}
-
-/* =====================================================
-   NOUVEAU : CHOIX DU MP4 SANS CONVERSION INUTILE
-===================================================== */
-
-async function getTikTokVideo(originalBlob,videoNumber){
+function getTikTokVideo(originalBlob,videoNumber){
 
   if(
-    originalBlob.type &&
-    originalBlob.type.toLowerCase().includes("mp4")
+    !originalBlob ||
+    !originalBlob.size ||
+    !originalBlob.type ||
+    !originalBlob.type.toLowerCase().includes("mp4")
   ){
-
-    setStatus(
-      "Vidéo "+videoNumber+
-      " : MP4 natif détecté. Pas besoin de démarrer FFmpeg."
-    );
-
-    return new Blob(
-      [originalBlob],
-      {type:"video/mp4"}
+    throw new Error(
+      "La vidéo "+videoNumber+" n'a pas été enregistrée en MP4 natif. Aucun autre format ne sera accepté."
     );
   }
 
   setStatus(
-    "Vidéo "+videoNumber+
-    " : le navigateur n'a pas produit de MP4. Conversion FFmpeg nécessaire..."
+    "Vidéo "+videoNumber+" : MP4 natif vérifié."
   );
 
-  return await convertToTikTokMP4(originalBlob,videoNumber);
+  return new Blob(
+    [originalBlob],
+    {type:"video/mp4"}
+  );
 }
 
 /* =====================================================
@@ -1890,6 +1703,12 @@ async function renderVideo(quiz,videoNumber=1){
       throw new Error("La vidéo MP4 générée est vide.");
     }
 
+    if(!blob.type.toLowerCase().includes("mp4")){
+      throw new Error(
+        "Le navigateur a produit un format différent du MP4. Le fichier n'a pas été téléchargé."
+      );
+    }
+
     return blob;
 
   }finally{
@@ -2036,7 +1855,7 @@ async function generateOne(){
 
     const originalBlob=await renderVideo(currentQuiz,1);
 
-    const blob=await getTikTokVideo(originalBlob,1);
+    const blob=getTikTokVideo(originalBlob,1);
 
     downloadBlob(blob,filename(1));
 
@@ -2087,7 +1906,7 @@ async function generateFive(){
 
       const originalBlob=await renderVideo(quiz,i);
 
-      const blob=await getTikTokVideo(originalBlob,i);
+      const blob=getTikTokVideo(originalBlob,i);
 
       zip.file(filename(i),blob);
 
