@@ -8,8 +8,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script type="module">
-import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
-window.FFmpegClass = FFmpeg;
+try {
+  const { FFmpeg } = await import(
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
+  );
+  window.FFmpegClass = FFmpeg;
+  window.FFmpegImportError = null;
+} catch (error) {
+  console.error("Chargement de FFmpeg impossible :", error);
+  window.FFmpegImportError = error;
+}
 </script>
 
 <style>
@@ -276,87 +284,62 @@ canvas{
   </p>
 
   <div class="theme-progress-list" id="themeProgressList">
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>🌍 Géographie</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>💻 Technologie</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>🧠 Culture générale</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>📜 Histoire</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>🔬 Sciences</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>⚽ Sport</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>🎬 Cinéma et séries</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
     <div class="theme-progress-item">
       <div class="theme-progress-top">
         <span>🐾 Animaux</span>
         <span class="theme-progress-count">0 / 100</span>
       </div>
-      <div class="theme-progress-track">
-        <div class="theme-progress-fill"></div>
-      </div>
+      <div class="theme-progress-track"><div class="theme-progress-fill"></div></div>
     </div>
-
   </div>
 </section>
 
@@ -370,7 +353,6 @@ canvas{
 <section class="panel">
   <h2>📚 Historique des questions utilisées</h2>
   <div class="history" id="history">Aucune question utilisée pour le moment.</div>
-
   <button class="secondary" id="clearHistory" style="margin-top:12px;width:100%">
     Effacer l'historique
   </button>
@@ -378,21 +360,17 @@ canvas{
 
 <section class="panel">
   <h2>📦 Banque de questions</h2>
-
   <p class="small">
     La grande banque sera chargée automatiquement depuis le fichier
     <b>banque_questions.json</b>, placé à côté de index.html sur GitHub.
     Tu peux aussi exporter ta banque pour me l'envoyer et importer une
     banque actualisée.
   </p>
-
   <div class="bank-buttons">
     <button id="exportBank">⬇️ Exporter la banque JSON</button>
     <button class="secondary" id="importBankBtn">📥 Importer une banque JSON</button>
   </div>
-
   <input class="file-input" type="file" id="importBankFile" accept=".json,application/json">
-
   <div class="status" id="bankStatus">
     Banque de secours : 40 questions.
   </div>
@@ -408,7 +386,6 @@ canvas{
 ===================================================== */
 
 let QUESTIONS = [
-
 {
 id:"geo01",theme:"Géographie",level:"FACILE",
 question:"Quelle est la capitale de l'Australie ?",
@@ -444,7 +421,6 @@ answer:"Wellington",
 options:["Auckland","Christchurch","Wellington","Hamilton"],
 image:"Wellington New Zealand skyline",emoji:"🌏"
 },
-
 {
 id:"tech01",theme:"Technologie",level:"FACILE",
 question:"Quel appareil permet généralement de distribuer le Wi-Fi à la maison ?",
@@ -480,7 +456,6 @@ answer:"Le GPU",
 options:["Le SSD","Le processeur audio","Le GPU","La mémoire ROM"],
 image:"Graphics card GPU",emoji:"🖥️"
 },
-
 {
 id:"cult01",theme:"Culture générale",level:"FACILE",
 question:"Combien de côtés possède un hexagone ?",
@@ -516,7 +491,6 @@ answer:"L'or",
 options:["L'argent","L'argon","L'or","L'aluminium"],
 image:"Gold nuggets metal",emoji:"🥇"
 },
-
 {
 id:"hist01",theme:"Histoire",level:"FACILE",
 question:"En quelle année débute la Révolution française ?",
@@ -552,7 +526,6 @@ answer:"Le traité de Versailles",
 options:["Le traité de Rome","Le traité de Versailles","Le traité de Maastricht","Le traité de Tordesillas"],
 image:"Treaty of Versailles 1919",emoji:"📜"
 },
-
 {
 id:"sci01",theme:"Sciences",level:"FACILE",
 question:"Quelle planète est surnommée la planète rouge ?",
@@ -588,7 +561,6 @@ answer:"L'électron",
 options:["Le proton","Le neutron","L'électron","Le photon"],
 image:"Electron atom scientific illustration",emoji:"⚛️"
 },
-
 {
 id:"sport01",theme:"Sport",level:"FACILE",
 question:"Combien de joueurs une équipe de football aligne-t-elle au début d'un match ?",
@@ -624,7 +596,6 @@ answer:"L'escrime",
 options:["Le tir à l'arc","L'escrime","Le pentathlon moderne","La gymnastique"],
 image:"Fencing foil sword sport",emoji:"🤺"
 },
-
 {
 id:"film01",theme:"Cinéma et séries",level:"FACILE",
 question:"Quel personnage vit dans un ananas au fond de la mer ?",
@@ -660,7 +631,6 @@ answer:"Christopher Nolan",
 options:["Steven Spielberg","James Cameron","Christopher Nolan","Denis Villeneuve"],
 image:"Inception movie city bending",emoji:"🎥"
 },
-
 {
 id:"ani01",theme:"Animaux",level:"FACILE",
 question:"Quel est le plus grand animal vivant sur Terre ?",
@@ -696,7 +666,6 @@ answer:"Les chauves-souris",
 options:["Les chauves-souris","Les écureuils volants","Les lémuriens","Les marsupiaux planeurs"],
 image:"Flying bat wings",emoji:"🦇"
 }
-
 ];
 
 /* =====================================================
@@ -767,17 +736,10 @@ function escapeHTML(str){
 function updateProgress(){
 
   const allIds=new Set(QUESTIONS.map(q=>q.id));
-
-  const allUsedIds=new Set(
-    usedHistory.filter(id=>allIds.has(id))
-  );
-
+  const allUsedIds=new Set(usedHistory.filter(id=>allIds.has(id)));
   const total=QUESTIONS.length;
   const used=allUsedIds.size;
-
-  const percentage=total
-    ? Math.min(100,Math.round((used/total)*100))
-    : 0;
+  const percentage=total?Math.min(100,Math.round((used/total)*100)):0;
 
   $("progressCount").textContent=
     used.toLocaleString("fr-FR")+" / "+
@@ -794,25 +756,15 @@ function updateProgress(){
       "Les questions jamais utilisées sont prioritaires. Les 8 compteurs ci-dessous sont actualisés automatiquement.";
   }
 
-  const list=$("themeProgressList");
-  const items=list.querySelectorAll(".theme-progress-item");
+  const items=$("themeProgressList").querySelectorAll(".theme-progress-item");
 
   THEMES.forEach((theme,index)=>{
-
     const pool=QUESTIONS.filter(q=>q.theme===theme.name);
     const themeIds=new Set(pool.map(q=>q.id));
-
-    const themeUsedIds=new Set(
-      usedHistory.filter(id=>themeIds.has(id))
-    );
-
+    const themeUsedIds=new Set(usedHistory.filter(id=>themeIds.has(id)));
     const themeTotal=pool.length;
     const themeUsed=themeUsedIds.size;
-
-    const themePercentage=themeTotal
-      ? Math.min(100,Math.round((themeUsed/themeTotal)*100))
-      : 0;
-
+    const themePercentage=themeTotal?Math.min(100,Math.round((themeUsed/themeTotal)*100)):0;
     const item=items[index];
 
     if(!item)return;
@@ -821,8 +773,7 @@ function updateProgress(){
       themeUsed.toLocaleString("fr-FR")+" / "+
       themeTotal.toLocaleString("fr-FR");
 
-    item.querySelector(".theme-progress-fill").style.width=
-      themePercentage+"%";
+    item.querySelector(".theme-progress-fill").style.width=themePercentage+"%";
   });
 }
 
@@ -844,7 +795,6 @@ function saveHistory(){
   }catch(e){
     console.warn("Impossible de sauvegarder tout l'historique :",e);
   }
-
   updateHistory();
 }
 
@@ -853,62 +803,29 @@ function saveHistory(){
 ===================================================== */
 
 function validateQuestion(q){
-
-  if(!q||typeof q!=="object")
-    throw new Error("Question invalide.");
-
-  if(typeof q.id!=="string"||!q.id.trim())
-    throw new Error("Identifiant de question manquant.");
-
-  if(typeof q.theme!=="string"||!q.theme.trim())
-    throw new Error("Thème manquant : "+q.id);
-
-  if(!["FACILE","MOYEN","DIFFICILE"].includes(q.level))
-    throw new Error("Difficulté invalide : "+q.id);
-
-  if(typeof q.question!=="string"||!q.question.trim())
-    throw new Error("Texte de question manquant : "+q.id);
-
-  if(typeof q.answer!=="string"||!q.answer.trim())
-    throw new Error("Réponse manquante : "+q.id);
-
-  if(!Array.isArray(q.options)||q.options.length!==4)
-    throw new Error("Une question ne possède pas exactement 4 propositions : "+q.id);
-
-  if(!q.options.every(o=>typeof o==="string"&&o.trim()))
-    throw new Error("Une proposition est invalide : "+q.id);
-
-  if(!q.options.includes(q.answer))
-    throw new Error("La bonne réponse manque dans les propositions : "+q.id);
-
-  if(new Set(q.options).size!==4)
-    throw new Error("Une question contient des propositions en double : "+q.id);
-
-  if(typeof q.image!=="string")
-    throw new Error("Image manquante : "+q.id);
-
-  if(typeof q.emoji!=="string")
-    throw new Error("Emoji manquant : "+q.id);
-
+  if(!q||typeof q!=="object")throw new Error("Question invalide.");
+  if(typeof q.id!=="string"||!q.id.trim())throw new Error("Identifiant de question manquant.");
+  if(typeof q.theme!=="string"||!q.theme.trim())throw new Error("Thème manquant : "+q.id);
+  if(!["FACILE","MOYEN","DIFFICILE"].includes(q.level))throw new Error("Difficulté invalide : "+q.id);
+  if(typeof q.question!=="string"||!q.question.trim())throw new Error("Texte de question manquant : "+q.id);
+  if(typeof q.answer!=="string"||!q.answer.trim())throw new Error("Réponse manquante : "+q.id);
+  if(!Array.isArray(q.options)||q.options.length!==4)throw new Error("Une question ne possède pas exactement 4 propositions : "+q.id);
+  if(!q.options.every(o=>typeof o==="string"&&o.trim()))throw new Error("Une proposition est invalide : "+q.id);
+  if(!q.options.includes(q.answer))throw new Error("La bonne réponse manque dans les propositions : "+q.id);
+  if(new Set(q.options).size!==4)throw new Error("Une question contient des propositions en double : "+q.id);
+  if(typeof q.image!=="string")throw new Error("Image manquante : "+q.id);
+  if(typeof q.emoji!=="string")throw new Error("Emoji manquant : "+q.id);
   return true;
 }
 
 function validateBank(bank){
-
-  if(!Array.isArray(bank)||bank.length<5)
-    throw new Error("La banque doit contenir au moins 5 questions.");
-
+  if(!Array.isArray(bank)||bank.length<5)throw new Error("La banque doit contenir au moins 5 questions.");
   const ids=new Set();
-
   bank.forEach(q=>{
     validateQuestion(q);
-
-    if(ids.has(q.id))
-      throw new Error("Identifiant en double : "+q.id);
-
+    if(ids.has(q.id))throw new Error("Identifiant en double : "+q.id);
     ids.add(q.id);
   });
-
   return true;
 }
 
@@ -917,67 +834,34 @@ function validateBank(bank){
 ===================================================== */
 
 async function loadRemoteBank(){
-
   try{
-
     $("bankStatus").textContent="Chargement de la banque distante...";
     setStatus("Chargement de la banque de questions depuis GitHub...");
 
-    const response=await fetch(
-      "./banque_questions.json?v="+Date.now(),
-      {cache:"no-store"}
-    );
-
-    if(!response.ok){
-      throw new Error("Fichier banque_questions.json introuvable (HTTP "+response.status+").");
-    }
+    const response=await fetch("./banque_questions.json?v="+Date.now(),{cache:"no-store"});
+    if(!response.ok)throw new Error("Fichier banque_questions.json introuvable (HTTP "+response.status+").");
 
     const data=await response.json();
     const bank=Array.isArray(data)?data:data.questions;
-
     validateBank(bank);
 
     QUESTIONS=bank.map(q=>({
-      id:q.id,
-      theme:q.theme,
-      level:q.level,
-      question:q.question,
-      answer:q.answer,
-      options:[...q.options],
-      image:q.image,
-      emoji:q.emoji
+      id:q.id,theme:q.theme,level:q.level,question:q.question,
+      answer:q.answer,options:[...q.options],image:q.image,emoji:q.emoji
     }));
 
     bankSource="GitHub";
     currentQuiz=[];
     imageCache={};
 
-    $("bankStatus").textContent=
-      "Banque GitHub chargée : "+
-      QUESTIONS.length.toLocaleString("fr-FR")+" questions.";
-
-    setStatus(
-      "Banque chargée avec succès : "+
-      QUESTIONS.length.toLocaleString("fr-FR")+
-      " questions disponibles !"
-    );
-
+    $("bankStatus").textContent="Banque GitHub chargée : "+QUESTIONS.length.toLocaleString("fr-FR")+" questions.";
+    setStatus("Banque chargée avec succès : "+QUESTIONS.length.toLocaleString("fr-FR")+" questions disponibles !");
     updateHistory();
 
   }catch(error){
-
     console.warn("Chargement de la banque distante impossible :",error);
-
-    $("bankStatus").textContent=
-      "Banque de secours active : "+
-      QUESTIONS.length+
-      " questions. Le fichier JSON distant n'a pas encore été chargé.";
-
-    setStatus(
-      "Prêt avec les 40 questions de secours. "+
-      "La grande banque sera activée dès que banque_questions.json sera ajouté sur GitHub."
-    );
-
+    $("bankStatus").textContent="Banque de secours active : "+QUESTIONS.length+" questions. Le fichier JSON distant n'a pas encore été chargé.";
+    setStatus("Prêt avec les 40 questions de secours. La grande banque sera activée dès que banque_questions.json sera ajouté sur GitHub.");
     updateHistory();
   }
 }
@@ -987,7 +871,6 @@ async function loadRemoteBank(){
 ===================================================== */
 
 function chooseQuiz(){
-
   const theme=$("theme").value;
   const difficulty=$("difficulty").value;
 
@@ -1005,30 +888,20 @@ function chooseQuiz(){
   const alreadyUsed=pool.filter(q=>usedHistory.includes(q.id));
 
   let selected;
-
   if(unused.length>=5){
     selected=shuffle(unused).slice(0,5);
   }else{
-    selected=[
-      ...shuffle(unused),
-      ...shuffle(alreadyUsed)
-    ].slice(0,5);
+    selected=[...shuffle(unused),...shuffle(alreadyUsed)].slice(0,5);
   }
 
   selected.forEach(validateQuestion);
-
   selected.forEach(q=>{
-    if(!usedHistory.includes(q.id)){
-      usedHistory.push(q.id);
-    }
+    if(!usedHistory.includes(q.id))usedHistory.push(q.id);
   });
 
   saveHistory();
 
-  return selected.map(q=>({
-    ...q,
-    options:shuffle(q.options)
-  }));
+  return selected.map(q=>({...q,options:shuffle(q.options)}));
 }
 
 /* =====================================================
@@ -1043,14 +916,12 @@ function roundedRect(x,y,w,h,r,color){
 }
 
 function wrapText(text,x,y,maxWidth,lineHeight,maxLines=3){
-
   const words=String(text).split(" ");
   let line="";
   let lines=[];
 
   for(const word of words){
     const test=line?line+" "+word:word;
-
     if(ctx.measureText(test).width>maxWidth&&line){
       lines.push(line);
       line=word;
@@ -1061,34 +932,25 @@ function wrapText(text,x,y,maxWidth,lineHeight,maxLines=3){
 
   if(line)lines.push(line);
   lines=lines.slice(0,maxLines);
-
-  lines.forEach((l,i)=>{
-    ctx.fillText(l,x,y+i*lineHeight);
-  });
-
+  lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lineHeight));
   return lines.length;
 }
 
 function background(){
-
   const gradient=ctx.createLinearGradient(0,0,W,H);
-
   gradient.addColorStop(0,"#210b42");
   gradient.addColorStop(.5,"#090014");
   gradient.addColorStop(1,"#300b4e");
-
   ctx.fillStyle=gradient;
   ctx.fillRect(0,0,W,H);
 
   ctx.globalAlpha=.12;
   ctx.fillStyle="#d8a5ff";
-
   for(let i=0;i<14;i++){
     ctx.beginPath();
     ctx.arc((i*197)%W,(i*311)%H,70+(i%3)*20,0,Math.PI*2);
     ctx.fill();
   }
-
   ctx.globalAlpha=1;
 }
 
@@ -1100,27 +962,21 @@ function drawBrand(){
 }
 
 function drawIntro(text){
-
   background();
   drawBrand();
-
   ctx.textAlign="center";
   ctx.fillStyle="#fff";
   ctx.font="bold 78px Arial";
-
   wrapText(text,W/2,650,850,100,3);
-
   ctx.font="bold 48px Arial";
   ctx.fillStyle="#d8a5ff";
   ctx.fillText("5 QUESTIONS • 1 DÉFI",W/2,1030);
-
   ctx.font="bold 38px Arial";
   ctx.fillStyle="#fff";
   ctx.fillText("Tu as 4 secondes pour répondre !",W/2,1450);
 }
 
 function drawQuestion(q,index,total,timeLeft,answerVisible=false){
-
   background();
   drawBrand();
 
@@ -1136,18 +992,15 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
   const img=imageCache[q.id];
 
   if(img&&img.complete&&img.naturalWidth){
-
     const maxW=650,maxH=410;
     const ratio=Math.min(maxW/img.width,maxH/img.height);
     const iw=img.width*ratio,ih=img.height*ratio;
-
     ctx.save();
     ctx.beginPath();
     ctx.roundRect((W-iw)/2,320,iw,ih,25);
     ctx.clip();
     ctx.drawImage(img,(W-iw)/2,320,iw,ih);
     ctx.restore();
-
   }else{
     ctx.font="150px Arial";
     ctx.fillText(q.emoji||"❓",W/2,580);
@@ -1157,26 +1010,15 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
   ctx.font="bold 52px Arial";
   wrapText(q.question,W/2,820,900,68,3);
 
-  const positions=[
-    [75,1080],[555,1080],[75,1320],[555,1320]
-  ];
+  const positions=[[75,1080],[555,1080],[75,1320],[555,1320]];
 
   q.options.forEach((option,i)=>{
-
     const [x,y]=positions[i];
     let color="#251044";
-
-    if(answerVisible&&option===q.answer){
-      color="#146c43";
-    }
-
+    if(answerVisible&&option===q.answer)color="#146c43";
     roundedRect(x,y,450,185,24,color);
 
-    ctx.strokeStyle=
-      answerVisible&&option===q.answer
-      ?"#5dffae"
-      :"#7542a0";
-
+    ctx.strokeStyle=answerVisible&&option===q.answer?"#5dffae":"#7542a0";
     ctx.lineWidth=5;
     ctx.stroke();
 
@@ -1202,19 +1044,15 @@ function drawQuestion(q,index,total,timeLeft,answerVisible=false){
 }
 
 function drawEnd(){
-
   background();
   drawBrand();
-
   ctx.textAlign="center";
   ctx.fillStyle="#fff";
   ctx.font="bold 90px Arial";
   ctx.fillText("BRAVO !",W/2,750);
-
   ctx.font="bold 54px Arial";
   ctx.fillStyle="#e4c4ff";
   ctx.fillText("Combien de bonnes réponses ?",W/2,900);
-
   ctx.font="bold 48px Arial";
   ctx.fillText("Abonne-toi pour les prochains quiz !",W/2,1450);
 }
@@ -1224,11 +1062,9 @@ function drawEnd(){
 ===================================================== */
 
 async function loadQuestionImage(q){
-
   if(imageCache[q.id])return imageCache[q.id];
 
   try{
-
     const url="https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch="+
       encodeURIComponent(q.image)+
       "&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*";
@@ -1236,17 +1072,14 @@ async function loadQuestionImage(q){
     const response=await fetch(url);
     const data=await response.json();
     const pages=data.query?.pages;
-
     if(!pages)return null;
 
     const page=Object.values(pages)[0];
     const imageURL=page.imageinfo?.[0]?.thumburl||page.imageinfo?.[0]?.url;
-
     if(!imageURL)return null;
 
     const img=new Image();
     img.crossOrigin="anonymous";
-
     await new Promise((resolve,reject)=>{
       img.onload=resolve;
       img.onerror=reject;
@@ -1255,7 +1088,6 @@ async function loadQuestionImage(q){
 
     imageCache[q.id]=img;
     return img;
-
   }catch(e){
     console.warn("Image indisponible pour",q.id,e);
     return null;
@@ -1271,73 +1103,43 @@ async function loadImages(quiz){
 ===================================================== */
 
 async function getVoice(){
-
   const gender=$("voice").value;
-
   if(gender==="female")return "ff_siwis";
-
   return voices.male;
 }
 
 async function speech(text,voice){
-
   const response=await fetch("https://api.tts.ai/v1/tts/",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
-      model:"kokoro",
-      text,
-      voice,
-      language:"fr",
-      format:"mp3",
-      speed:1
+      model:"kokoro",text,voice,language:"fr",format:"mp3",speed:1
     })
   });
 
-  if(!response.ok){
-    throw new Error("Erreur lors de la création de la voix.");
-  }
-
+  if(!response.ok)throw new Error("Erreur lors de la création de la voix.");
   const data=await response.json();
 
   if(data.audio_url||data.url){
-
     const audioResponse=await fetch(data.audio_url||data.url);
-
-    if(!audioResponse.ok){
-      throw new Error("Impossible de récupérer l'audio.");
-    }
-
+    if(!audioResponse.ok)throw new Error("Impossible de récupérer l'audio.");
     return await audioResponse.arrayBuffer();
   }
 
   const uuid=data.uuid||data.id;
-
-  if(!uuid){
-    throw new Error("Réponse vocale invalide.");
-  }
+  if(!uuid)throw new Error("Réponse vocale invalide.");
 
   for(let i=0;i<40;i++){
-
     await new Promise(resolve=>setTimeout(resolve,1500));
-
-    const result=await fetch(
-      "https://api.tts.ai/v1/speech/results/?uuid="+encodeURIComponent(uuid)
-    );
-
+    const result=await fetch("https://api.tts.ai/v1/speech/results/?uuid="+encodeURIComponent(uuid));
     if(!result.ok)continue;
 
     const resultData=await result.json();
-
-    const audioURL=resultData.audio_url||resultData.url||
-      resultData.result?.audio_url||resultData.result?.url;
+    const audioURL=resultData.audio_url||resultData.url||resultData.result?.audio_url||resultData.result?.url;
 
     if(audioURL){
-
       const audioResponse=await fetch(audioURL);
-
       if(!audioResponse.ok)continue;
-
       return await audioResponse.arrayBuffer();
     }
 
@@ -1358,54 +1160,24 @@ function wait(ms){
 }
 
 async function prepareAudio(quiz,introText,voice){
-
   const segments=[];
-
   setStatus("Préparation de la voix...");
 
   const introBuffer=await speech(introText,voice);
-
-  segments.push({
-    type:"intro",
-    buffer:introBuffer
-  });
+  segments.push({type:"intro",buffer:introBuffer});
 
   for(let i=0;i<quiz.length;i++){
-
     setStatus("Création des voix : question "+(i+1)+"/5");
-
     const questionBuffer=await speech(quiz[i].question,voice);
     const answerBuffer=await speech(quiz[i].answer+".",voice);
 
-    segments.push({
-      type:"question",
-      index:i,
-      buffer:questionBuffer
-    });
-
-    segments.push({
-      type:"think",
-      index:i,
-      duration:THINK_SECONDS
-    });
-
-    segments.push({
-      type:"answer",
-      index:i,
-      buffer:answerBuffer
-    });
+    segments.push({type:"question",index:i,buffer:questionBuffer});
+    segments.push({type:"think",index:i,duration:THINK_SECONDS});
+    segments.push({type:"answer",index:i,buffer:answerBuffer});
   }
 
-  const endBuffer=await speech(
-    "Abonne-toi pour les prochains quiz !",
-    voice
-  );
-
-  segments.push({
-    type:"end",
-    buffer:endBuffer
-  });
-
+  const endBuffer=await speech("Abonne-toi pour les prochains quiz !",voice);
+  segments.push({type:"end",buffer:endBuffer});
   return segments;
 }
 
@@ -1414,7 +1186,6 @@ async function prepareAudio(quiz,introText,voice){
 ===================================================== */
 
 function getMP4MimeType(){
-
   if(!window.MediaRecorder){
     throw new Error("Ton navigateur ne permet pas l'enregistrement vidéo.");
   }
@@ -1425,191 +1196,176 @@ function getMP4MimeType(){
     "video/mp4"
   ];
 
-  if(typeof MediaRecorder.isTypeSupported!=="function"){
-    return "video/mp4";
-  }
+  if(typeof MediaRecorder.isTypeSupported!=="function")return "video/mp4";
 
-  const supported=candidates.find(type=>
-    MediaRecorder.isTypeSupported(type)
-  );
+  const supported=candidates.find(type=>MediaRecorder.isTypeSupported(type));
 
   if(!supported){
-    throw new Error(
-      "Ton navigateur ne prend pas en charge l'enregistrement MP4 avec audio. Essaie avec Safari sur iPhone ou un navigateur compatible MP4."
-    );
+    throw new Error("Ton navigateur ne prend pas en charge l'enregistrement MP4 avec audio. Essaie avec Safari sur iPhone ou un navigateur compatible MP4.");
   }
 
   console.log("Format MP4 sélectionné :",supported);
-
   return supported;
 }
 
 /* =====================================================
-   CONVERSION AUTOMATIQUE FFMPEG
+   CHARGEMENT FFMPEG CORRIGÉ
 ===================================================== */
 
 let ffmpegInstance=null;
 let ffmpegLoading=null;
 let ffmpegBlobURLs=[];
 
-async function createFFmpegBlobURL(url,mimeType){
+function timeoutPromise(promise,milliseconds,message){
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error(message)),milliseconds);
+    })
+  ]).finally(()=>clearTimeout(timer));
+}
 
-  const response=await fetch(url);
+async function fetchWithTimeout(url,mimeType){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),25000);
 
-  if(!response.ok){
-    throw new Error("Impossible de télécharger un composant FFmpeg.");
+  try{
+    const response=await fetch(url,{signal:controller.signal,cache:"force-cache"});
+    if(!response.ok)throw new Error("Erreur HTTP "+response.status+" pour "+url);
+    const data=await response.arrayBuffer();
+    return new Blob([data],{type:mimeType});
+  }catch(error){
+    if(error.name==="AbortError"){
+      throw new Error("Le téléchargement FFmpeg a dépassé 25 secondes.");
+    }
+    throw error;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+async function createFFmpegBlobURL(urls,mimeType){
+  let lastError=null;
+
+  for(const url of urls){
+    try{
+      const blob=await fetchWithTimeout(url,mimeType);
+      const objectURL=URL.createObjectURL(blob);
+      ffmpegBlobURLs.push(objectURL);
+      return objectURL;
+    }catch(error){
+      console.warn("CDN FFmpeg indisponible :",url,error);
+      lastError=error;
+    }
   }
 
-  const data=await response.arrayBuffer();
-
-  const blob=new Blob([data],{type:mimeType});
-  const objectURL=URL.createObjectURL(blob);
-
-  ffmpegBlobURLs.push(objectURL);
-
-  return objectURL;
+  throw lastError||new Error("Impossible de télécharger un composant FFmpeg.");
 }
 
 async function loadFFmpeg(){
-
-  if(ffmpegInstance){
-    return ffmpegInstance;
-  }
-
-  if(ffmpegLoading){
-    return ffmpegLoading;
-  }
+  if(ffmpegInstance)return ffmpegInstance;
+  if(ffmpegLoading)return ffmpegLoading;
 
   ffmpegLoading=(async()=>{
+    setStatus("Chargement du moteur FFmpeg : récupération des fichiers...");
 
-    setStatus("Téléchargement du moteur FFmpeg... Première utilisation uniquement.");
+    if(window.FFmpegImportError){
+      throw new Error("La bibliothèque FFmpeg n'a pas pu être importée. Recharge la page et réessaie.");
+    }
 
     if(!window.FFmpegClass){
-      throw new Error("FFmpeg n'a pas pu être chargé. Recharge la page.");
+      throw new Error("La bibliothèque FFmpeg n'est pas encore prête. Attends quelques secondes puis réessaie.");
     }
 
     const ffmpeg=new window.FFmpegClass();
 
-    const coreBaseURL=
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd";
+    const coreURLs=[
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+      "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"
+    ];
 
-    const workerBaseURL=
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm";
+    const wasmURLs=[
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
+      "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm"
+    ];
 
-    const coreURL=await createFFmpegBlobURL(
-      coreBaseURL+"/ffmpeg-core.js",
-      "text/javascript"
+    const workerURLs=[
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js",
+      "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js"
+    ];
+
+    setStatus("FFmpeg : téléchargement du moteur...");
+    const coreURL=await createFFmpegBlobURL(coreURLs,"text/javascript");
+
+    setStatus("FFmpeg : téléchargement du fichier WASM...");
+    const wasmURL=await createFFmpegBlobURL(wasmURLs,"application/wasm");
+
+    setStatus("FFmpeg : préparation du worker...");
+    const classWorkerURL=await createFFmpegBlobURL(workerURLs,"text/javascript");
+
+    setStatus("FFmpeg : démarrage du moteur...");
+
+    await timeoutPromise(
+      ffmpeg.load({coreURL,wasmURL,classWorkerURL}),
+      60000,
+      "FFmpeg n'a pas réussi à démarrer après 60 secondes. Safari a peut-être bloqué le worker."
     );
-
-    const wasmURL=await createFFmpegBlobURL(
-      coreBaseURL+"/ffmpeg-core.wasm",
-      "application/wasm"
-    );
-
-    const classWorkerURL=await createFFmpegBlobURL(
-      workerBaseURL+"/worker.js",
-      "text/javascript"
-    );
-
-    await ffmpeg.load({
-      coreURL,
-      wasmURL,
-      classWorkerURL
-    });
 
     ffmpegInstance=ffmpeg;
-
+    setStatus("Moteur FFmpeg chargé !");
     return ffmpeg;
-
   })();
 
   try{
-
     return await ffmpegLoading;
-
   }catch(error){
-
     ffmpegLoading=null;
     ffmpegInstance=null;
-
+    console.error("Erreur de chargement FFmpeg :",error);
     throw error;
   }
 }
 
 async function convertToTikTokMP4(blob,videoNumber){
-
-  setStatus(
-    "Conversion TikTok de la vidéo "+videoNumber+
-    " : préparation de FFmpeg..."
-  );
+  setStatus("Conversion TikTok de la vidéo "+videoNumber+" : préparation de FFmpeg...");
 
   const ffmpeg=await loadFFmpeg();
-
-  const inputExtension=
-    blob.type.includes("webm")?"webm":"mp4";
-
-  const inputName="video_source_"+videoNumber+"."+inputExtension;
+  const inputName="video_source_"+videoNumber+".mp4";
   const outputName="video_tiktok_"+videoNumber+".mp4";
 
   try{
+    setStatus("Conversion TikTok de la vidéo "+videoNumber+" : encodage H.264 et AAC...");
 
-    setStatus(
-      "Conversion TikTok de la vidéo "+videoNumber+
-      " : encodage H.264 et AAC..."
-    );
-
-    await ffmpeg.writeFile(
-      inputName,
-      new Uint8Array(await blob.arrayBuffer())
-    );
+    await ffmpeg.writeFile(inputName,new Uint8Array(await blob.arrayBuffer()));
 
     const exitCode=await ffmpeg.exec([
-
       "-i",inputName,
-
       "-c:v","libx264",
       "-preset","ultrafast",
       "-crf","23",
       "-pix_fmt","yuv420p",
       "-profile:v","main",
-
       "-c:a","aac",
       "-profile:a","aac_low",
       "-b:a","192k",
       "-ar","48000",
       "-ac","2",
-
       "-movflags","+faststart",
-
       "-y",
       outputName
-
     ]);
 
-    if(exitCode!==0){
-      throw new Error("FFmpeg n'a pas réussi à convertir la vidéo.");
-    }
+    if(exitCode!==0)throw new Error("FFmpeg n'a pas réussi à convertir la vidéo.");
 
     const output=await ffmpeg.readFile(outputName);
+    if(!output||!output.length)throw new Error("La vidéo convertie est vide.");
 
-    if(!output||!output.length){
-      throw new Error("La vidéo convertie est vide.");
-    }
-
-    return new Blob(
-      [output],
-      {type:"video/mp4"}
-    );
+    return new Blob([output.buffer.slice(output.byteOffset,output.byteOffset+output.byteLength)],{type:"video/mp4"});
 
   }finally{
-
-    try{
-      await ffmpeg.deleteFile(inputName);
-    }catch(e){}
-
-    try{
-      await ffmpeg.deleteFile(outputName);
-    }catch(e){}
+    try{await ffmpeg.deleteFile(inputName);}catch(e){}
+    try{await ffmpeg.deleteFile(outputName);}catch(e){}
   }
 }
 
@@ -1618,14 +1374,9 @@ async function convertToTikTokMP4(blob,videoNumber){
 ===================================================== */
 
 async function renderVideo(quiz,videoNumber=1){
-
   const mimeType=getMP4MimeType();
-
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-
-  const audioContext=new AudioContextClass({
-    sampleRate:48000
-  });
+  const audioContext=new AudioContextClass({sampleRate:48000});
 
   await audioContext.resume();
 
@@ -1633,30 +1384,20 @@ async function renderVideo(quiz,videoNumber=1){
   let audioDestination=null;
 
   try{
-
     const voice=await getVoice();
     const introText=$("intro").value;
-
     const segments=await prepareAudio(quiz,introText,voice);
 
     setStatus("Préparation des images...");
     await loadImages(quiz);
-
     setStatus("Préparation de la vidéo MP4...");
 
     const decoded=[];
 
     for(const segment of segments){
-
       if(segment.buffer){
-
         const buffer=await audioContext.decodeAudioData(segment.buffer.slice(0));
-
-        decoded.push({
-          ...segment,
-          audio:buffer
-        });
-
+        decoded.push({...segment,audio:buffer});
       }else{
         decoded.push(segment);
       }
@@ -1666,74 +1407,26 @@ async function renderVideo(quiz,videoNumber=1){
     let cursor=0;
 
     for(const segment of decoded){
-
       if(segment.type==="intro"){
-
-        timeline.push({
-          type:"intro",
-          start:cursor,
-          end:cursor+segment.audio.duration,
-          audio:segment.audio
-        });
-
+        timeline.push({type:"intro",start:cursor,end:cursor+segment.audio.duration,audio:segment.audio});
         cursor+=segment.audio.duration;
-      }
-
-      else if(segment.type==="question"){
-
-        timeline.push({
-          type:"question",
-          index:segment.index,
-          start:cursor,
-          end:cursor+segment.audio.duration,
-          audio:segment.audio
-        });
-
+      }else if(segment.type==="question"){
+        timeline.push({type:"question",index:segment.index,start:cursor,end:cursor+segment.audio.duration,audio:segment.audio});
         cursor+=segment.audio.duration;
-      }
-
-      else if(segment.type==="think"){
-
-        timeline.push({
-          type:"think",
-          index:segment.index,
-          start:cursor,
-          end:cursor+segment.duration
-        });
-
+      }else if(segment.type==="think"){
+        timeline.push({type:"think",index:segment.index,start:cursor,end:cursor+segment.duration});
         cursor+=segment.duration;
-      }
-
-      else if(segment.type==="answer"){
-
+      }else if(segment.type==="answer"){
         const duration=Math.max(REVEAL_SECONDS,segment.audio.duration);
-
-        timeline.push({
-          type:"answer",
-          index:segment.index,
-          start:cursor,
-          end:cursor+duration,
-          audio:segment.audio
-        });
-
+        timeline.push({type:"answer",index:segment.index,start:cursor,end:cursor+duration,audio:segment.audio});
         cursor+=duration;
-      }
-
-      else if(segment.type==="end"){
-
-        timeline.push({
-          type:"end",
-          start:cursor,
-          end:cursor+segment.audio.duration,
-          audio:segment.audio
-        });
-
+      }else if(segment.type==="end"){
+        timeline.push({type:"end",start:cursor,end:cursor+segment.audio.duration,audio:segment.audio});
         cursor+=segment.audio.duration;
       }
     }
 
     const totalDuration=cursor;
-
     canvasStream=canvas.captureStream(30);
     audioDestination=audioContext.createMediaStreamDestination();
 
@@ -1755,18 +1448,15 @@ async function renderVideo(quiz,videoNumber=1){
     }
 
     const chunks=[];
-
     recorder.ondataavailable=e=>{
       if(e.data&&e.data.size)chunks.push(e.data);
     };
 
     const finished=new Promise((resolve,reject)=>{
-
       recorder.onstop=()=>{
         const actualType=recorder.mimeType||mimeType;
         resolve(new Blob(chunks,{type:actualType}));
       };
-
       recorder.onerror=()=>{
         reject(new Error("Erreur d'enregistrement vidéo MP4."));
       };
@@ -1775,11 +1465,8 @@ async function renderVideo(quiz,videoNumber=1){
     const startTime=audioContext.currentTime+0.4;
 
     for(const segment of timeline){
-
       if(segment.audio){
-
         const source=audioContext.createBufferSource();
-
         source.buffer=segment.audio;
         source.connect(audioDestination);
         source.start(startTime+segment.start);
@@ -1790,7 +1477,6 @@ async function renderVideo(quiz,videoNumber=1){
     recorder.start(250);
 
     function drawFrame(){
-
       const elapsed=audioContext.currentTime-startTime;
 
       if(elapsed>=totalDuration){
@@ -1812,28 +1498,14 @@ async function renderVideo(quiz,videoNumber=1){
       }
 
       if(segment.type==="intro"){
-
         drawIntro(introText);
-
       }else if(segment.type==="question"){
-
-        const q=quiz[segment.index];
-        drawQuestion(q,segment.index,quiz.length,4,false);
-
+        drawQuestion(quiz[segment.index],segment.index,quiz.length,4,false);
       }else if(segment.type==="think"){
-
-        const q=quiz[segment.index];
-        const remaining=Math.ceil(segment.end-elapsed);
-
-        drawQuestion(q,segment.index,quiz.length,remaining,false);
-
+        drawQuestion(quiz[segment.index],segment.index,quiz.length,Math.ceil(segment.end-elapsed),false);
       }else if(segment.type==="answer"){
-
-        const q=quiz[segment.index];
-        drawQuestion(q,segment.index,quiz.length,0,true);
-
+        drawQuestion(quiz[segment.index],segment.index,quiz.length,0,true);
       }else if(segment.type==="end"){
-
         drawEnd();
       }
 
@@ -1842,24 +1514,13 @@ async function renderVideo(quiz,videoNumber=1){
 
     drawFrame();
 
-    const blob=await finished;
-
-    if(!blob.size){
-      throw new Error("La vidéo MP4 générée est vide.");
-    }
-
-    return blob;
+    const resultBlob=await finished;
+    if(!resultBlob.size)throw new Error("La vidéo MP4 générée est vide.");
+    return resultBlob;
 
   }finally{
-
-    if(canvasStream){
-      canvasStream.getTracks().forEach(t=>t.stop());
-    }
-
-    if(audioDestination){
-      audioDestination.stream.getTracks().forEach(t=>t.stop());
-    }
-
+    if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());
+    if(audioDestination)audioDestination.stream.getTracks().forEach(t=>t.stop());
     await audioContext.close();
   }
 }
@@ -1869,7 +1530,6 @@ async function renderVideo(quiz,videoNumber=1){
 ===================================================== */
 
 function stopPreview(){
-
   if(previewTimer){
     clearInterval(previewTimer);
     previewTimer=null;
@@ -1877,33 +1537,21 @@ function stopPreview(){
 }
 
 async function preview(){
-
-  if(!currentQuiz.length){
-    currentQuiz=chooseQuiz();
-  }
-
+  if(!currentQuiz.length)currentQuiz=chooseQuiz();
   if(!currentQuiz.length)return;
 
   stopPreview();
-
   await loadImages(currentQuiz);
 
   let step=0;
   let start=Date.now();
 
   function draw(){
-
     const elapsed=(Date.now()-start)/1000;
 
     if(step===0){
-
       drawIntro($("intro").value);
-
-      if(elapsed>=2){
-        step=1;
-        start=Date.now();
-      }
-
+      if(elapsed>=2){step=1;start=Date.now();}
       return;
     }
 
@@ -1919,24 +1567,12 @@ async function preview(){
     const q=currentQuiz[questionIndex];
 
     if(isAnswer){
-
       drawQuestion(q,questionIndex,5,0,true);
-
-      if(elapsed>=REVEAL_SECONDS){
-        step++;
-        start=Date.now();
-      }
-
+      if(elapsed>=REVEAL_SECONDS){step++;start=Date.now();}
     }else{
-
       const remaining=Math.max(0,THINK_SECONDS-Math.floor(elapsed));
-
       drawQuestion(q,questionIndex,5,remaining,false);
-
-      if(elapsed>=THINK_SECONDS){
-        step++;
-        start=Date.now();
-      }
+      if(elapsed>=THINK_SECONDS){step++;start=Date.now();}
     }
   }
 
@@ -1949,33 +1585,24 @@ async function preview(){
 ===================================================== */
 
 function downloadBlob(blob,filename){
-
   const url=URL.createObjectURL(blob);
-
   const a=document.createElement("a");
   a.href=url;
   a.download=filename;
-
   document.body.appendChild(a);
   a.click();
   a.remove();
-
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 
 function filename(index){
-
   const date=new Date().toISOString().slice(0,10);
-
   return "quizzzz123_"+date+"_video_"+index+".mp4";
 }
 
 async function generateOne(){
-
   stopPreview();
-
   if(!currentQuiz.length)currentQuiz=chooseQuiz();
-
   if(!currentQuiz.length)return;
 
   $("oneBtn").disabled=true;
@@ -1983,26 +1610,18 @@ async function generateOne(){
   $("newQuiz").disabled=true;
 
   try{
-
     setStatus("Vérification de la compatibilité MP4...");
-
     getMP4MimeType();
 
     const originalBlob=await renderVideo(currentQuiz,1);
-
     const blob=await convertToTikTokMP4(originalBlob,1);
 
     downloadBlob(blob,filename(1));
-
     setStatus("Vidéo MP4 convertie et générée avec succès !");
-
   }catch(error){
-
     console.error(error);
     setStatus("Erreur : "+error.message);
-
   }finally{
-
     $("oneBtn").disabled=false;
     $("fiveBtn").disabled=false;
     $("newQuiz").disabled=false;
@@ -2010,7 +1629,6 @@ async function generateOne(){
 }
 
 async function generateFive(){
-
   stopPreview();
 
   $("oneBtn").disabled=true;
@@ -2018,47 +1636,33 @@ async function generateFive(){
   $("newQuiz").disabled=true;
 
   try{
-
     setStatus("Vérification de la compatibilité MP4...");
-
     getMP4MimeType();
 
     const zip=new JSZip();
 
     for(let i=1;i<=5;i++){
-
       setStatus("Création de la vidéo MP4 "+i+"/5...");
-
       const quiz=chooseQuiz();
 
-      if(!quiz.length){
-        throw new Error("Impossible de sélectionner les questions.");
-      }
+      if(!quiz.length)throw new Error("Impossible de sélectionner les questions.");
 
       const originalBlob=await renderVideo(quiz,i);
-
       const blob=await convertToTikTokMP4(originalBlob,i);
 
       zip.file(filename(i),blob);
-
       if(i<5)await wait(500);
     }
 
     setStatus("Création du fichier ZIP...");
-
     const zipBlob=await zip.generateAsync({type:"blob"});
-
     downloadBlob(zipBlob,"quizzzz123_5_videos_MP4.zip");
-
     setStatus("Les 5 vidéos converties sont prêtes !");
 
   }catch(error){
-
     console.error(error);
     setStatus("Erreur : "+error.message);
-
   }finally{
-
     $("oneBtn").disabled=false;
     $("fiveBtn").disabled=false;
     $("newQuiz").disabled=false;
@@ -2070,9 +1674,7 @@ async function generateFive(){
 ===================================================== */
 
 function exportBank(){
-
   try{
-
     validateBank(QUESTIONS);
 
     const data={
@@ -2083,17 +1685,11 @@ function exportBank(){
       questions:QUESTIONS
     };
 
-    const blob=new Blob(
-      [JSON.stringify(data,null,2)],
-      {type:"application/json;charset=utf-8"}
-    );
-
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json;charset=utf-8"});
     const date=new Date().toISOString().slice(0,10);
 
     downloadBlob(blob,"quizzzz123_banque_questions_"+date+".json");
-
-    $("bankStatus").textContent=
-      "Export réussi : "+QUESTIONS.length+" questions enregistrées.";
+    $("bankStatus").textContent="Export réussi : "+QUESTIONS.length+" questions enregistrées.";
 
   }catch(error){
     $("bankStatus").textContent="Erreur d'export : "+error.message;
@@ -2105,73 +1701,40 @@ function exportBank(){
 ===================================================== */
 
 async function importBank(file){
-
   if(!file)return;
 
   try{
-
     const text=await file.text();
     const data=JSON.parse(text);
-
     const bank=Array.isArray(data)?data:data.questions;
 
     validateBank(bank);
 
-    const confirmed=confirm(
-      "Importer cette banque de "+bank.length+
-      " questions ? Elle remplacera la banque actuelle."
-    );
-
+    const confirmed=confirm("Importer cette banque de "+bank.length+" questions ? Elle remplacera la banque actuelle.");
     if(!confirmed)return;
 
     QUESTIONS=bank.map(q=>({
-      id:q.id,
-      theme:q.theme,
-      level:q.level,
-      question:q.question,
-      answer:q.answer,
-      options:[...q.options],
-      image:q.image,
-      emoji:q.emoji
+      id:q.id,theme:q.theme,level:q.level,question:q.question,
+      answer:q.answer,options:[...q.options],image:q.image,emoji:q.emoji
     }));
 
     try{
-
-      localStorage.setItem(
-        "quiz_question_bank",
-        JSON.stringify({
-          version:1,
-          questions:QUESTIONS
-        })
-      );
-
+      localStorage.setItem("quiz_question_bank",JSON.stringify({version:1,questions:QUESTIONS}));
     }catch(storageError){
-
-      console.warn(
-        "Banque trop volumineuse pour le stockage local. Elle reste active pour cette session.",
-        storageError
-      );
+      console.warn("Banque trop volumineuse pour le stockage local. Elle reste active pour cette session.",storageError);
     }
 
     bankSource="import";
     currentQuiz=[];
     imageCache={};
 
-    $("bankStatus").textContent=
-      "Import réussi : "+QUESTIONS.length+
-      " questions chargées.";
-
+    $("bankStatus").textContent="Import réussi : "+QUESTIONS.length+" questions chargées.";
     setStatus("Nouvelle banque de questions importée avec succès !");
-
     updateHistory();
 
   }catch(error){
-
     console.error(error);
-
-    $("bankStatus").textContent=
-      "Import impossible : "+error.message;
-
+    $("bankStatus").textContent="Import impossible : "+error.message;
   }finally{
     $("importBankFile").value="";
   }
@@ -2182,9 +1745,7 @@ async function importBank(file){
 ===================================================== */
 
 $("newQuiz").addEventListener("click",()=>{
-
   stopPreview();
-
   currentQuiz=chooseQuiz();
 
   if(currentQuiz.length){
@@ -2194,21 +1755,14 @@ $("newQuiz").addEventListener("click",()=>{
 });
 
 $("previewBtn").addEventListener("click",preview);
-
 $("oneBtn").addEventListener("click",generateOne);
-
 $("fiveBtn").addEventListener("click",generateFive);
 
 $("clearHistory").addEventListener("click",()=>{
-
   if(confirm("Effacer tout l'historique des questions utilisées ?")){
-
     usedHistory=[];
-
     localStorage.removeItem("quiz_history");
-
     updateHistory();
-
     setStatus("Historique effacé.");
   }
 });
@@ -2220,9 +1774,7 @@ $("importBankBtn").addEventListener("click",()=>{
 });
 
 $("importBankFile").addEventListener("change",event=>{
-
   const file=event.target.files?.[0];
-
   importBank(file);
 });
 
@@ -2234,7 +1786,6 @@ $("bankStatus").textContent=
   "Banque de secours : "+QUESTIONS.length+" questions. Chargement de la banque distante...";
 
 drawIntro("Teste tes connaissances !");
-
 loadRemoteBank();
 
 </script>
