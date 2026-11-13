@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -242,15 +243,16 @@ canvas{
   <div class="buttons">
     <button id="newQuiz">🎲 Créer un nouveau quiz</button>
     <button class="secondary" id="previewBtn">▶ Aperçu animé</button>
-    <button id="oneBtn">🎥 Générer une vidéo MP4</button>
-    <button id="fiveBtn">📦 Générer 5 vidéos MP4 ZIP</button>
+    <button id="oneBtn">🎥 Générer vidéo + son séparés</button>
+    <button id="fiveBtn">📦 Générer 5 vidéos + sons (ZIP)</button>
   </div>
 
   <div class="status" id="status">Chargement de la banque de questions...</div>
 
   <p class="small">
     Chaque vidéo contient 5 questions. Temps de réflexion : 4 secondes.
-    Affichage de la réponse : 2 secondes minimum. Format vidéo : MP4 uniquement.
+    Affichage de la réponse : 2 secondes minimum.
+    La vidéo MP4 et la piste audio WAV sont générées séparément pour être importées dans CapCut.
   </p>
 </section>
 
@@ -1345,7 +1347,7 @@ async function speech(text,voice){
 }
 
 /* =====================================================
-   CRÉATION DE LA VIDÉO MP4
+   CRÉATION DES SEGMENTS AUDIO
 ===================================================== */
 
 function wait(ms){
@@ -1405,7 +1407,112 @@ async function prepareAudio(quiz,introText,voice){
 }
 
 /* =====================================================
-   COMPATIBILITÉ MP4 UNIQUEMENT
+   ENCODAGE AUDIO WAV
+===================================================== */
+
+function encodeWav(audioBuffer){
+
+  const channels=audioBuffer.numberOfChannels;
+  const sampleRate=audioBuffer.sampleRate;
+  const frames=audioBuffer.length;
+  const bytesPerSample=2;
+  const dataSize=frames*channels*bytesPerSample;
+
+  const buffer=new ArrayBuffer(44+dataSize);
+  const view=new DataView(buffer);
+
+  function writeString(offset,str){
+    for(let i=0;i<str.length;i++){
+      view.setUint8(offset+i,str.charCodeAt(i));
+    }
+  }
+
+  writeString(0,"RIFF");
+  view.setUint32(4,36+dataSize,true);
+  writeString(8,"WAVE");
+  writeString(12,"fmt ");
+  view.setUint32(16,16,true);
+  view.setUint16(20,1,true);
+  view.setUint16(22,channels,true);
+  view.setUint32(24,sampleRate,true);
+  view.setUint32(28,sampleRate*channels*bytesPerSample,true);
+  view.setUint16(32,channels*bytesPerSample,true);
+  view.setUint16(34,16,true);
+  writeString(36,"data");
+  view.setUint32(40,dataSize,true);
+
+  const channelData=[];
+
+  for(let c=0;c<channels;c++){
+    channelData.push(audioBuffer.getChannelData(c));
+  }
+
+  let offset=44;
+
+  for(let i=0;i<frames;i++){
+
+    for(let c=0;c<channels;c++){
+
+      let sample=Math.max(-1,Math.min(1,channelData[c][i]));
+
+      view.setInt16(
+        offset,
+        sample<0?sample*0x8000:sample*0x7fff,
+        true
+      );
+
+      offset+=2;
+    }
+  }
+
+  return new Blob([buffer],{type:"audio/wav"});
+}
+
+/* =====================================================
+   RENDU AUDIO SÉPARÉ
+===================================================== */
+
+async function renderAudioTrack(timeline,totalDuration){
+
+  const OfflineContext=
+    window.OfflineAudioContext||
+    window.webkitOfflineAudioContext;
+
+  if(!OfflineContext){
+    throw new Error(
+      "Ton navigateur ne permet pas de créer la piste audio WAV séparée."
+    );
+  }
+
+  const sampleRate=48000;
+  const frameCount=Math.ceil(totalDuration*sampleRate);
+
+  const offline=new OfflineContext(
+    2,
+    frameCount,
+    sampleRate
+  );
+
+  timeline.forEach(segment=>{
+
+    if(!segment.audio)return;
+
+    const source=offline.createBufferSource();
+
+    source.buffer=segment.audio;
+    source.connect(offline.destination);
+    source.start(segment.start);
+  });
+
+  setStatus("Création de la piste audio WAV...");
+
+  const rendered=await offline.startRendering();
+
+  return encodeWav(rendered);
+}
+
+/* =====================================================
+   COMPATIBILITÉ MP4 VIDÉO SANS AUDIO
 ===================================================== */
 
 function getMP4MimeType(){
@@ -1415,8 +1522,8 @@ function getMP4MimeType(){
   }
 
   const candidates=[
-    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
-    "video/mp4;codecs=avc1,mp4a.40.2",
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4;codecs=avc1",
     "video/mp4"
   ];
 
@@ -1436,7 +1543,7 @@ function getMP4MimeType(){
     );
   }
 
-  console.log("Format MP4 sélectionné :",supported);
+  console.log("Format MP4 vidéo sélectionné :",supported);
 
   return supported;
 }
@@ -1458,10 +1565,6 @@ function getTikTokVideo(originalBlob,videoNumber){
     );
   }
 
-  setStatus(
-    "Vidéo "+videoNumber+" : MP4 natif vérifié."
-  );
-
   return new Blob(
     [originalBlob],
     {type:"video/mp4"}
@@ -1469,14 +1572,20 @@ function getTikTokVideo(originalBlob,videoNumber){
 }
 
 /* =====================================================
-   ENREGISTREMENT DE LA VIDÉO
+   ENREGISTREMENT DE LA VIDÉO SANS SON
 ===================================================== */
 
 async function renderVideo(quiz,videoNumber=1){
 
   const mimeType=getMP4MimeType();
 
-  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  const AudioContextClass=
+    window.AudioContext||
+    window.webkitAudioContext;
+
+  if(!AudioContextClass){
+    throw new Error("Ton navigateur ne prend pas en charge Web Audio.");
+  }
 
   const audioContext=new AudioContextClass({
     sampleRate:48000
@@ -1485,7 +1594,6 @@ async function renderVideo(quiz,videoNumber=1){
   await audioContext.resume();
 
   let canvasStream=null;
-  let audioDestination=null;
 
   try{
 
@@ -1505,7 +1613,9 @@ async function renderVideo(quiz,videoNumber=1){
 
       if(segment.buffer){
 
-        const buffer=await audioContext.decodeAudioData(segment.buffer.slice(0));
+        const buffer=await audioContext.decodeAudioData(
+          segment.buffer.slice(0)
+        );
 
         decoded.push({
           ...segment,
@@ -1561,7 +1671,10 @@ async function renderVideo(quiz,videoNumber=1){
 
       else if(segment.type==="answer"){
 
-        const duration=Math.max(REVEAL_SECONDS,segment.audio.duration);
+        const duration=Math.max(
+          REVEAL_SECONDS,
+          segment.audio.duration
+        );
 
         timeline.push({
           type:"answer",
@@ -1589,57 +1702,68 @@ async function renderVideo(quiz,videoNumber=1){
 
     const totalDuration=cursor;
 
+    if(!Number.isFinite(totalDuration)||totalDuration<=0){
+      throw new Error("Durée de vidéo invalide.");
+    }
+
+    /*
+      La vidéo et le WAV utilisent exactement la même timeline.
+      Le MP4 est volontairement enregistré sans piste audio.
+    */
+
     canvasStream=canvas.captureStream(30);
-    audioDestination=audioContext.createMediaStreamDestination();
 
     const stream=new MediaStream([
-      ...canvasStream.getVideoTracks(),
-      ...audioDestination.stream.getAudioTracks()
+      ...canvasStream.getVideoTracks()
     ]);
 
     let recorder;
 
     try{
+
       recorder=new MediaRecorder(stream,{
         mimeType,
-        videoBitsPerSecond:4000000,
-        audioBitsPerSecond:192000
+        videoBitsPerSecond:4000000
       });
+
     }catch(error){
-      throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
+
+      throw new Error(
+        "Impossible de démarrer l'enregistrement MP4 sur ce navigateur."
+      );
     }
 
     const chunks=[];
 
     recorder.ondataavailable=e=>{
-      if(e.data&&e.data.size)chunks.push(e.data);
+      if(e.data&&e.data.size){
+        chunks.push(e.data);
+      }
     };
 
     const finished=new Promise((resolve,reject)=>{
 
       recorder.onstop=()=>{
         const actualType=recorder.mimeType||mimeType;
-        resolve(new Blob(chunks,{type:actualType}));
+
+        resolve(
+          new Blob(chunks,{type:actualType})
+        );
       };
 
       recorder.onerror=()=>{
-        reject(new Error("Erreur d'enregistrement vidéo MP4."));
+        reject(
+          new Error("Erreur d'enregistrement vidéo MP4.")
+        );
       };
     });
 
+    /*
+      L'horloge AudioContext sert uniquement à synchroniser
+      les images de la vidéo. Aucun son n'est envoyé au MP4.
+    */
+
     const startTime=audioContext.currentTime+0.4;
-
-    for(const segment of timeline){
-
-      if(segment.audio){
-
-        const source=audioContext.createBufferSource();
-
-        source.buffer=segment.audio;
-        source.connect(audioDestination);
-        source.start(startTime+segment.start);
-      }
-    }
 
     drawIntro(introText);
     recorder.start(250);
@@ -1649,20 +1773,31 @@ async function renderVideo(quiz,videoNumber=1){
       const elapsed=audioContext.currentTime-startTime;
 
       if(elapsed>=totalDuration){
-        if(recorder.state!=="inactive")recorder.stop();
+
+        if(recorder.state!=="inactive"){
+          recorder.stop();
+        }
+
         return;
       }
 
       if(elapsed<0){
+
         drawIntro(introText);
         requestAnimationFrame(drawFrame);
         return;
       }
 
-      const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
+      const segment=timeline.find(s=>
+        elapsed>=s.start&&elapsed<s.end
+      );
 
       if(!segment){
-        if(recorder.state!=="inactive")recorder.stop();
+
+        if(recorder.state!=="inactive"){
+          recorder.stop();
+        }
+
         return;
       }
 
@@ -1673,19 +1808,39 @@ async function renderVideo(quiz,videoNumber=1){
       }else if(segment.type==="question"){
 
         const q=quiz[segment.index];
-        drawQuestion(q,segment.index,quiz.length,4,false);
+
+        drawQuestion(
+          q,
+          segment.index,
+          quiz.length,
+          4,
+          false
+        );
 
       }else if(segment.type==="think"){
 
         const q=quiz[segment.index];
         const remaining=Math.ceil(segment.end-elapsed);
 
-        drawQuestion(q,segment.index,quiz.length,remaining,false);
+        drawQuestion(
+          q,
+          segment.index,
+          quiz.length,
+          remaining,
+          false
+        );
 
       }else if(segment.type==="answer"){
 
         const q=quiz[segment.index];
-        drawQuestion(q,segment.index,quiz.length,0,true);
+
+        drawQuestion(
+          q,
+          segment.index,
+          quiz.length,
+          0,
+          true
+        );
 
       }else if(segment.type==="end"){
 
@@ -1697,28 +1852,44 @@ async function renderVideo(quiz,videoNumber=1){
 
     drawFrame();
 
-    const blob=await finished;
+    setStatus("Enregistrement de la vidéo sans son...");
 
-    if(!blob.size){
+    const videoBlob=await finished;
+
+    if(!videoBlob.size){
       throw new Error("La vidéo MP4 générée est vide.");
     }
 
-    if(!blob.type.toLowerCase().includes("mp4")){
+    if(!videoBlob.type.toLowerCase().includes("mp4")){
       throw new Error(
         "Le navigateur a produit un format différent du MP4. Le fichier n'a pas été téléchargé."
       );
     }
 
-    return blob;
+    /*
+      On fabrique le WAV après l'enregistrement vidéo.
+      Les deux fichiers ont la même timeline et la même durée cible.
+    */
+
+    const audioBlob=await renderAudioTrack(
+      timeline,
+      totalDuration
+    );
+
+    if(!audioBlob||!audioBlob.size){
+      throw new Error("La piste audio WAV générée est vide.");
+    }
+
+    return {
+      videoBlob,
+      audioBlob,
+      duration:totalDuration
+    };
 
   }finally{
 
     if(canvasStream){
       canvasStream.getTracks().forEach(t=>t.stop());
-    }
-
-    if(audioDestination){
-      audioDestination.stream.getTracks().forEach(t=>t.stop());
     }
 
     await audioContext.close();
@@ -1790,9 +1961,18 @@ async function preview(){
 
     }else{
 
-      const remaining=Math.max(0,THINK_SECONDS-Math.floor(elapsed));
+      const remaining=Math.max(
+        0,
+        THINK_SECONDS-Math.floor(elapsed)
+      );
 
-      drawQuestion(q,questionIndex,5,remaining,false);
+      drawQuestion(
+        q,
+        questionIndex,
+        5,
+        remaining,
+        false
+      );
 
       if(elapsed>=THINK_SECONDS){
         step++;
@@ -1806,7 +1986,7 @@ async function preview(){
 }
 
 /* =====================================================
-   TÉLÉCHARGEMENT MP4
+   TÉLÉCHARGEMENT
 ===================================================== */
 
 function downloadBlob(blob,filename){
@@ -1821,7 +2001,9 @@ function downloadBlob(blob,filename){
   a.click();
   a.remove();
 
-  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+  },30000);
 }
 
 function filename(index){
@@ -1832,14 +2014,16 @@ function filename(index){
 }
 
 /* =====================================================
-   GÉNÉRER UNE VIDÉO
+   GÉNÉRER UNE VIDÉO + UN AUDIO SÉPARÉ
 ===================================================== */
 
 async function generateOne(){
 
   stopPreview();
 
-  if(!currentQuiz.length)currentQuiz=chooseQuiz();
+  if(!currentQuiz.length){
+    currentQuiz=chooseQuiz();
+  }
 
   if(!currentQuiz.length)return;
 
@@ -1853,13 +2037,32 @@ async function generateOne(){
 
     getMP4MimeType();
 
-    const originalBlob=await renderVideo(currentQuiz,1);
+    const result=await renderVideo(currentQuiz,1);
 
-    const blob=getTikTokVideo(originalBlob,1);
+    const videoBlob=getTikTokVideo(
+      result.videoBlob,
+      1
+    );
 
-    downloadBlob(blob,filename(1));
+    const zip=new JSZip();
 
-    setStatus("Vidéo MP4 générée avec succès !");
+    zip.file("video.mp4",videoBlob);
+    zip.file("audio.wav",result.audioBlob);
+
+    setStatus("Préparation du ZIP avec la vidéo et le son...");
+
+    const zipBlob=await zip.generateAsync({
+      type:"blob"
+    });
+
+    downloadBlob(
+      zipBlob,
+      "quizzzz123_video_et_audio_1.zip"
+    );
+
+    setStatus(
+      "Vidéo MP4 et audio WAV générés ! Les deux fichiers sont dans le ZIP."
+    );
 
   }catch(error){
 
@@ -1875,7 +2078,7 @@ async function generateOne(){
 }
 
 /* =====================================================
-   GÉNÉRER CINQ VIDÉOS
+   GÉNÉRER CINQ VIDÉOS + CINQ AUDIOS
 ===================================================== */
 
 async function generateFive(){
@@ -1896,30 +2099,53 @@ async function generateFive(){
 
     for(let i=1;i<=5;i++){
 
-      setStatus("Création de la vidéo MP4 "+i+"/5...");
+      setStatus(
+        "Création du quiz "+i+"/5 : vidéo et audio..."
+      );
 
       const quiz=chooseQuiz();
 
       if(!quiz.length){
-        throw new Error("Impossible de sélectionner les questions.");
+        throw new Error(
+          "Impossible de sélectionner les questions."
+        );
       }
 
-      const originalBlob=await renderVideo(quiz,i);
+      const result=await renderVideo(quiz,i);
 
-      const blob=getTikTokVideo(originalBlob,i);
+      const videoBlob=getTikTokVideo(
+        result.videoBlob,
+        i
+      );
 
-      zip.file(filename(i),blob);
+      /*
+        Chaque dossier contient les deux fichiers du même quiz.
+      */
 
-      if(i<5)await wait(500);
+      const folder=zip.folder("quiz_"+i);
+
+      folder.file("video.mp4",videoBlob);
+      folder.file("audio.wav",result.audioBlob);
+
+      if(i<5){
+        await wait(500);
+      }
     }
 
     setStatus("Création du fichier ZIP...");
 
-    const zipBlob=await zip.generateAsync({type:"blob"});
+    const zipBlob=await zip.generateAsync({
+      type:"blob"
+    });
 
-    downloadBlob(zipBlob,"quizzzz123_5_videos_MP4.zip");
+    downloadBlob(
+      zipBlob,
+      "quizzzz123_5_videos_et_audios.zip"
+    );
 
-    setStatus("Les 5 vidéos MP4 sont prêtes !");
+    setStatus(
+      "Les 5 vidéos MP4 et les 5 pistes WAV sont prêtes !"
+    );
 
   }catch(error){
 
@@ -1959,13 +2185,18 @@ function exportBank(){
 
     const date=new Date().toISOString().slice(0,10);
 
-    downloadBlob(blob,"quizzzz123_banque_questions_"+date+".json");
+    downloadBlob(
+      blob,
+      "quizzzz123_banque_questions_"+date+".json"
+    );
 
     $("bankStatus").textContent=
       "Export réussi : "+QUESTIONS.length+" questions enregistrées.";
 
   }catch(error){
-    $("bankStatus").textContent="Erreur d'export : "+error.message;
+
+    $("bankStatus").textContent=
+      "Erreur d'export : "+error.message;
   }
 }
 
@@ -2030,7 +2261,9 @@ async function importBank(file){
       "Import réussi : "+QUESTIONS.length+
       " questions chargées.";
 
-    setStatus("Nouvelle banque de questions importée avec succès !");
+    setStatus(
+      "Nouvelle banque de questions importée avec succès !"
+    );
 
     updateHistory();
 
@@ -2057,8 +2290,18 @@ $("newQuiz").addEventListener("click",()=>{
   currentQuiz=chooseQuiz();
 
   if(currentQuiz.length){
-    drawQuestion(currentQuiz[0],0,5,4,false);
-    setStatus("Nouveau quiz créé : 5 questions prêtes !");
+
+    drawQuestion(
+      currentQuiz[0],
+      0,
+      5,
+      4,
+      false
+    );
+
+    setStatus(
+      "Nouveau quiz créé : 5 questions prêtes !"
+    );
   }
 });
 
@@ -2100,7 +2343,8 @@ $("importBankFile").addEventListener("change",event=>{
 updateHistory();
 
 $("bankStatus").textContent=
-  "Banque de secours : "+QUESTIONS.length+" questions. Chargement de la banque distante...";
+  "Banque de secours : "+QUESTIONS.length+
+  " questions. Chargement de la banque distante...";
 
 drawIntro("Teste tes connaissances !");
 
