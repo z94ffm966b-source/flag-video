@@ -796,7 +796,6 @@ function updateProgress(){
   THEMES.forEach((theme,index)=>{
 
     const pool=QUESTIONS.filter(q=>q.theme===theme.name);
-
     const themeIds=new Set(pool.map(q=>q.id));
 
     const themeUsedIds=new Set(
@@ -930,7 +929,6 @@ async function loadRemoteBank(){
     }
 
     const data=await response.json();
-
     const bank=Array.isArray(data)?data:data.questions;
 
     validateBank(bank);
@@ -1408,7 +1406,7 @@ async function prepareAudio(quiz,introText,voice){
 }
 
 /* =====================================================
-   COMPATIBILITÉ MP4 — H.264 + AAC
+   COMPATIBILITÉ AUDIO / MP4 TIKTOK
 ===================================================== */
 
 function getMP4MimeType(){
@@ -1417,6 +1415,7 @@ function getMP4MimeType(){
     throw new Error("Ton navigateur ne permet pas l'enregistrement vidéo.");
   }
 
+  // On privilégie MP4 avec vidéo H.264 et audio AAC.
   const candidates=[
     "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
     "video/mp4;codecs=avc1,mp4a.40.2",
@@ -1433,7 +1432,7 @@ function getMP4MimeType(){
 
   if(!supported){
     throw new Error(
-      "Ton navigateur ne prend pas en charge l'enregistrement MP4 avec les codecs nécessaires. Essaie avec Safari ou un navigateur compatible."
+      "Ton navigateur ne prend pas en charge l'enregistrement MP4 avec audio. Essaie avec Safari sur iPhone ou un navigateur compatible MP4."
     );
   }
 
@@ -1442,17 +1441,13 @@ function getMP4MimeType(){
   return supported;
 }
 
-/* =====================================================
-   RENDU VIDÉO
-   Horloge vidéo indépendante de requestAnimationFrame
-===================================================== */
-
 async function renderVideo(quiz,videoNumber=1){
 
   const mimeType=getMP4MimeType();
 
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
 
+  // Fréquence audio standard utilisée pour améliorer la compatibilité.
   const audioContext=new AudioContextClass({
     sampleRate:48000
   });
@@ -1461,8 +1456,6 @@ async function renderVideo(quiz,videoNumber=1){
 
   let canvasStream=null;
   let audioDestination=null;
-  let frameTimer=null;
-  let recorder=null;
 
   try{
 
@@ -1574,19 +1567,16 @@ async function renderVideo(quiz,videoNumber=1){
       ...audioDestination.stream.getAudioTracks()
     ]);
 
-    try{
+    let recorder;
 
+    try{
       recorder=new MediaRecorder(stream,{
         mimeType,
         videoBitsPerSecond:4000000,
         audioBitsPerSecond:192000
       });
-
     }catch(error){
-
-      throw new Error(
-        "Impossible de démarrer l'enregistrement MP4 sur ce navigateur."
-      );
+      throw new Error("Impossible de démarrer l'enregistrement MP4 sur ce navigateur.");
     }
 
     const chunks=[];
@@ -1607,14 +1597,7 @@ async function renderVideo(quiz,videoNumber=1){
       };
     });
 
-    /*
-      Synchronisation audio et vidéo.
-      Le son est programmé avec AudioContext.
-      L'image utilise une horloge indépendante.
-    */
-
-    const startDelay=0.5;
-    const audioStartTime=audioContext.currentTime+startDelay;
+    const startTime=audioContext.currentTime+0.4;
 
     for(const segment of timeline){
 
@@ -1624,113 +1607,34 @@ async function renderVideo(quiz,videoNumber=1){
 
         source.buffer=segment.audio;
         source.connect(audioDestination);
-        source.start(audioStartTime+segment.start);
+        source.start(startTime+segment.start);
       }
     }
 
     drawIntro(introText);
-
-    recorder.start();
-
-    const wallStart=performance.now()+startDelay*1000;
+    recorder.start(250);
 
     function drawFrame(){
 
-      if(recorder.state==="inactive")return;
+      const elapsed=audioContext.currentTime-startTime;
 
-      const elapsed=(performance.now()-wallStart)/1000;
-
-      /*
-        Avant le début du son.
-      */
+      if(elapsed>=totalDuration){
+        if(recorder.state!=="inactive")recorder.stop();
+        return;
+      }
 
       if(elapsed<0){
-
         drawIntro(introText);
-
-        frameTimer=setTimeout(drawFrame,33);
+        requestAnimationFrame(drawFrame);
         return;
       }
 
-      /*
-        Fin normale de la vidéo.
-      */
-
-      if(elapsed>=totalDuration+0.15){
-
-        drawEnd();
-
-        if(recorder.state!=="inactive"){
-          recorder.stop();
-        }
-
-        return;
-      }
-
-      /*
-        Recherche de la séquence correspondant au temps actuel.
-      */
-
-      const segment=timeline.find(s=>
-        elapsed>=s.start&&elapsed<s.end
-      );
-
-      /*
-        Si une petite différence de synchronisation apparaît,
-        on conserve une image valide.
-      */
+      const segment=timeline.find(s=>elapsed>=s.start&&elapsed<s.end);
 
       if(!segment){
-
-        if(elapsed<timeline[0].start){
-
-          drawIntro(introText);
-
-        }else{
-
-          const previous=timeline
-            .filter(s=>s.start<=elapsed)
-            .slice(-1)[0];
-
-          if(previous){
-
-            if(previous.type==="intro"){
-
-              drawIntro(introText);
-
-            }else if(previous.type==="end"){
-
-              drawEnd();
-
-            }else{
-
-              const q=quiz[previous.index];
-
-              if(q){
-
-                drawQuestion(
-                  q,
-                  previous.index,
-                  quiz.length,
-                  0,
-                  previous.type==="answer"
-                );
-              }
-            }
-
-          }else{
-
-            drawIntro(introText);
-          }
-        }
-
-        frameTimer=setTimeout(drawFrame,33);
+        if(recorder.state!=="inactive")recorder.stop();
         return;
       }
-
-      /*
-        Dessin de chaque type de séquence.
-      */
 
       if(segment.type==="intro"){
 
@@ -1739,55 +1643,29 @@ async function renderVideo(quiz,videoNumber=1){
       }else if(segment.type==="question"){
 
         const q=quiz[segment.index];
-
-        drawQuestion(
-          q,
-          segment.index,
-          quiz.length,
-          THINK_SECONDS,
-          false
-        );
+        drawQuestion(q,segment.index,quiz.length,4,false);
 
       }else if(segment.type==="think"){
 
         const q=quiz[segment.index];
         const remaining=Math.ceil(segment.end-elapsed);
 
-        drawQuestion(
-          q,
-          segment.index,
-          quiz.length,
-          remaining,
-          false
-        );
+        drawQuestion(q,segment.index,quiz.length,remaining,false);
 
       }else if(segment.type==="answer"){
 
         const q=quiz[segment.index];
-
-        drawQuestion(
-          q,
-          segment.index,
-          quiz.length,
-          0,
-          true
-        );
+        drawQuestion(q,segment.index,quiz.length,0,true);
 
       }else if(segment.type==="end"){
 
         drawEnd();
       }
 
-      frameTimer=setTimeout(drawFrame,33);
+      requestAnimationFrame(drawFrame);
     }
 
-    /*
-      Première image puis lancement de la boucle.
-    */
-
-    drawIntro(introText);
-
-    frameTimer=setTimeout(drawFrame,10);
+    drawFrame();
 
     const blob=await finished;
 
@@ -1798,16 +1676,6 @@ async function renderVideo(quiz,videoNumber=1){
     return blob;
 
   }finally{
-
-    if(frameTimer!==null){
-      clearTimeout(frameTimer);
-    }
-
-    if(recorder&&recorder.state!=="inactive"){
-      try{
-        recorder.stop();
-      }catch(e){}
-    }
 
     if(canvasStream){
       canvasStream.getTracks().forEach(t=>t.stop());
